@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>第1回 しゅり検定</title>
+<style>
+  :root{
+    --bg:#fff8fb;
+    --card:#ffffff;
+    --ink:#3b2f3a;
+    --muted:#847783;
+    --accent:#ff6fae;
+    --accent2:#8b6cff;
+    --line:#eadde6;
+    --good:#20a56b;
+    --bad:#d94c66;
+    --soft:#fff0f6;
+    --gold:#ffbf3f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(255,111,174,.12), transparent 28%),
+      radial-gradient(circle at 90% 5%, rgba(139,108,255,.10), transparent 26%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 50px}
+  .hero{
+    background:linear-gradient(135deg,#fff,#fff4fa);
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:24px 20px;
+    box-shadow:0 10px 30px rgba(99,62,88,.08);
+    margin-bottom:14px;
+  }
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;color:var(--accent2)}
+  h1{font-size:30px;line-height:1.15;margin:7px 0 8px}
+  .sub{color:var(--muted);line-height:1.6;font-size:14px}
+  .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .mini{
+    padding:7px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);
+    font-size:12px;font-weight:700
+  }
+  .panel{
+    background:var(--card);border:1px solid var(--line);border-radius:22px;
+    padding:18px;box-shadow:0 8px 24px rgba(99,62,88,.06);margin-top:14px
+  }
+  .hidden{display:none!important}
+  label{display:block;font-weight:800;margin-bottom:7px}
+  input[type=text]{
+    width:100%;padding:14px 15px;border:1.5px solid var(--line);border-radius:15px;
+    font-size:16px;outline:none;background:#fff
+  }
+  input[type=text]:focus{border-color:var(--accent)}
+  button{
+    border:0;border-radius:15px;padding:13px 16px;font-size:15px;font-weight:800;
+    cursor:pointer;transition:.18s;touch-action:manipulation
+  }
+  button:active{transform:scale(.98)}
+  .primary{background:linear-gradient(135deg,var(--accent),#ff91c0);color:white;width:100%}
+  .secondary{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+  .danger{background:#fff4f5;color:var(--bad);border:1px solid #ffd7dd}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+  .progressBox{flex:1}
+  .progressLabel{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--muted);margin-bottom:6px}
+  .progress{height:10px;border-radius:999px;background:#f1e8ef;overflow:hidden}
+  .progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
+  .timer{
+    min-width:76px;text-align:center;padding:8px 10px;border-radius:13px;
+    background:#f8f5ff;color:var(--accent2);font-weight:900;font-variant-numeric:tabular-nums
+  }
+  .level{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12px;font-weight:900;color:var(--accent2);
+    background:#f5f1ff;border-radius:999px;padding:7px 10px;margin-bottom:10px
+  }
+  .q{font-size:20px;font-weight:900;line-height:1.45;margin:4px 0 16px}
+  .choices{display:grid;gap:10px}
+  .choice{
+    text-align:left;width:100%;background:#fff;border:1.5px solid var(--line);
+    color:var(--ink);padding:14px 15px;border-radius:15px;line-height:1.45
+  }
+  .choice:hover{border-color:#d9c5d4;background:#fffafd}
+  .choice.correct{border-color:#8cd7b8;background:#effaf5;color:#166443}
+  .choice.wrong{border-color:#f0a2b1;background:#fff2f4;color:#9c2940}
+  .feedback{
+    margin-top:13px;padding:13px 14px;border-radius:14px;background:#faf7fb;
+    border:1px solid var(--line);font-size:14px;line-height:1.6
+  }
+  .feedback b{display:block;margin-bottom:3px}
+  .nextrow{display:flex;gap:10px;margin-top:13px}
+  .nextrow .primary{flex:1}
+  .stopHint{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+  .resultHero{text-align:center;padding:8px 0 2px}
+  .resultType{font-size:13px;font-weight:900;color:var(--muted)}
+  .rank{
+    font-size:38px;font-weight:1000;margin:5px 0;
+    background:linear-gradient(135deg,var(--accent2),var(--accent));
+    -webkit-background-clip:text;background-clip:text;color:transparent
+  }
+  .score{font-size:22px;font-weight:900}
+  .note{font-size:13px;color:var(--muted);line-height:1.6;margin-top:8px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+  .stat{background:#faf7fb;border:1px solid var(--line);border-radius:15px;padding:12px 8px;text-align:center}
+  .stat strong{display:block;font-size:20px}
+  .stat span{font-size:11px;color:var(--muted)}
+  .rankingTitle{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .ranking{display:grid;gap:8px}
+  .rankrow{
+    display:grid;grid-template-columns:42px 1fr 76px 76px;gap:8px;align-items:center;
+    padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:#fff
+  }
+  .rankrow.head{font-size:11px;color:var(--muted);font-weight:800;background:#faf7fb}
+  .place{font-weight:1000}
+  .name{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tiny{font-size:12px;color:var(--muted);text-align:right}
+  .shareText{
+    white-space:pre-wrap;background:#faf7fb;border:1px solid var(--line);border-radius:14px;
+    padding:13px;font-size:13px;line-height:1.6;margin-top:10px
+  }
+  .footerNote{margin-top:14px;font-size:11px;line-height:1.6;color:var(--muted)}
+  .pill{
+    display:inline-flex;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;
+    background:#fff1f7;color:#be3f77
+  }
+  @media (max-width:560px){
+    h1{font-size:27px}
+    .q{font-size:18px}
+    .rankrow{grid-template-columns:34px 1fr 62px 58px}
+    .grid2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="startScreen">
+    <div class="hero">
+      <div class="eyebrow">SHURI CERTIFICATION TEST</div>
+      <h1>🐰 第1回 しゅり検定</h1>
+      <div class="sub">
+        しゅりのこと、どこまで知ってる？<br>
+        基本情報から「そこ覚えてるの！？」まで全50問。
+      </div>
+      <div class="badge-row">
+        <span class="mini">全50問</span>
+        <span class="mini">100点満点</span>
+        <span class="mini">5問から途中判定OK</span>
+        <span class="mini">最高位：師範</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <label for="playerName">ランキング表示名</label>
+      <input id="playerName" type="text" maxlength="16" placeholder="例：しゅりなー太郎" />
+      <div style="height:12px"></div>
+      <button class="primary" id="startBtn">検定をはじめる ✨</button>
+      <div class="footerNote">
+        ※この試作版のランキングは、この端末・このブラウザ内だけに保存されます。
+        みんな共通ランキングは、あとでデータベース連携版にできます。
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="rankingTitle">
+        <strong>🏆 この端末のランキング</strong>
+        <button class="secondary" id="clearRankingBtn" style="padding:8px 10px;font-size:12px">リセット</button>
+      </div>
+      <div id="startRanking" class="ranking"></div>
+    </div>
+  </section>
+
+  <section id="quizScreen" class="hidden">
+    <div class="panel">
+      <div class="topbar">
+        <div class="progressBox">
+          <div class="progressLabel">
+            <span id="progressText">1 / 20</span>
+            <span id="scoreText">0点</span>
+          </div>
+          <div class="progress"><div id="progressBar"></div></div>
+        </div>
+        <div class="timer" id="timer">00:00</div>
+      </div>
+
+      <div class="level" id="levelLabel"></div>
+      <div class="q" id="questionText"></div>
+      <div class="choices" id="choices"></div>
+      <div id="feedback" class="feedback hidden"></div>
+
+      <div id="nextRow" class="nextrow hidden">
+        <button class="primary" id="nextBtn">次の問題へ</button>
+      </div>
+
+      <div style="height:10px"></div>
+      <button id="stopBtn" class="danger hidden" style="width:100%">ここで判定する</button>
+      <div class="stopHint">5問回答すると途中判定できます。前半はやさしく、後半ほど「知る人ぞ知る」問題になります。途中判定は「暫定認定」です。</div>
+    </div>
+  </section>
+
+  <section id="resultScreen" class="hidden">
+    <div class="panel">
+      <div class="resultHero">
+        <div class="resultType" id="resultType"></div>
+        <div class="rank" id="resultRank"></div>
+        <div class="score" id="resultScore"></div>
+        <div class="note" id="resultNote"></div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><strong id="statCorrect">0</strong><span>正解</span></div>
+        <div class="stat"><strong id="statAnswered">0</strong><span>回答数</span></div>
+        <div class="stat"><strong id="statTime">0:00</strong><span>タイム</span></div>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="grid2">
+        <button class="primary" id="retryBtn">もう一度挑戦</button>
+        <button class="secondary" id="copyBtn">結果をコピー</button>
+      </div>
+
+      <div id="shareText" class="shareText"></div>
+    </div>
+
+    <div class="panel" id="rankingPanel">
+      <div class="rankingTitle">
+        <strong>🏆 完走ランキング</strong>
+        <span class="pill">同点はタイム順</span>
+      </div>
+      <div id="resultRanking" class="ranking"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const questions = [
+  {lv:1,q:"「しゅりりりりりり」の「り」は全部で何個？",a:["4個", "5個", "6個", "7個"],c:2,e:"正解は6個。"},
+  {lv:1,q:"しゅりの好きな食べ物は？",a:["チョコレート", "プリン", "ラーメン", "いちご"],c:0,e:"好きな食べ物はチョコレート。"},
+  {lv:1,q:"しゅりの好きなアニメは？",a:["カードキャプターさくら", "おジャ魔女どれみ", "セーラームーン", "プリキュア"],c:1,e:"好きなアニメは「おジャ魔女どれみ」。"},
+  {lv:1,q:"しゅりの実家はどこ？",a:["福岡", "熊本", "鹿児島", "宮崎"],c:2,e:"実家は鹿児島。"},
+  {lv:1,q:"しゅりの仕事は？",a:["ダンス講師", "美容師", "看護師", "保育士"],c:0,e:"しゅりはダンス講師。"},
+  {lv:1,q:"しゅりが配信しているアプリは？",a:["REALITY", "IRIAM", "Pococha", "17LIVE"],c:0,e:"配信アプリはREALITY。"},
+  {lv:1,q:"しゅりが毎日欠かさずXに投稿しているものは？",a:["おはよう", "おやすみ", "今日のごはん", "ダンス動画"],c:0,e:"毎日のおはよう投稿。"},
+  {lv:1,q:"しゅりが配信タイトルに必ず入れているものは？",a:["初見🙆‍♀️回復❤️‍🩹雑談🗣️", "歌🎤ゲーム🎮深夜🌙", "初見🔰作業💻雑談☕", "回復💊歌🎶相談💬"],c:0,e:"「初見🙆‍♀️回復❤️‍🩹雑談🗣️」が定番。"},
+  {lv:1,q:"しゅりのファンネームは？",a:["しゅり民", "しゅりなー", "しゅり組", "しゅりぴーぽー"],c:1,e:"ファンネームは「しゅりなー」。"},
+  {lv:1,q:"しゅりのファンマークは？",a:["🐰✨", "💪🏻🐰", "🐰🎶", "🕺🐰"],c:1,e:"ファンマークは 💪🏻🐰。"},
+  {lv:1,q:"しゅりの枠といえば？",a:["ASMRと朗読", "効果音とギフト芸", "ゲーム実況と歌枠", "作業配信とニュース"],c:1,e:"しゅり枠といえば、効果音とギフト芸。"},
+  {lv:1,q:"24時になった時にしゅりが言うのは？",a:["日付変更！", "バトンタッチ‼️", "おやすみ！", "第二部開始！"],c:1,e:"24時になったら「バトンタッチ‼️」。"},
+  {lv:2,q:"しゅりは声が誰に似ていると言われる？",a:["野原しんのすけ", "江戸川コナン", "ドラえもん", "ピカチュウ"],c:1,e:"声はコナンくんに似ていると言われることがある。"},
+  {lv:2,q:"しゅりの話し方についてよく言われることは？",a:["ゆっくりで眠くなる", "早口で滑舌がいい", "小声で聞き取りづらい", "語尾が全部伸びる"],c:1,e:"「早口で滑舌がいい」と言われることが多い。"},
+  {lv:2,q:"しゅりはどんな印象だと言われることが多い？",a:["クールで静か", "明るくて元気", "無口でミステリアス", "おっとりしている"],c:1,e:"「明るくて元気」が定番。"},
+  {lv:2,q:"枠終わりのセリフは？",a:["あっぷっぷ", "またぴょん", "HP満タン！", "おつしゅり"],c:0,e:"枠終わりは「あっぷっぷ」。"},
+  {lv:2,q:"しゅりのHP回復のための掛け声は？",a:["ぱっぱらぱっぱっぱー‼️", "ぴろりろりーん‼️", "えいえいおー‼️", "ぽよぽよぽーん‼️"],c:0,e:"HP回復の掛け声は「ぱっぱらぱっぱっぱー‼️」。"},
+  {lv:2,q:"しゅりの配信では基本HPがいくつ回復する？",a:["＋1", "＋5", "＋10", "＋100"],c:0,e:"基本はHP＋1。"},
+  {lv:2,q:"しゅりが自分のアバターのアイデンティティだと思っているのは？",a:["うさ耳とぐるぐる目", "猫耳と八重歯", "ツインテールと星目", "眼鏡と赤いリボン"],c:0,e:"アイデンティティは「うさ耳とぐるぐる目」。"},
+  {lv:2,q:"しゅりが使っているiPhoneの組み合わせは？",a:["配信用13・本端末16", "配信用14・本端末16", "配信用13・本端末15", "配信用12・本端末16"],c:0,e:"配信用はiPhone 13、本端末はiPhone 16。"},
+  {lv:2,q:"しゅりのオリジナルソングの名前は？",a:["君と始める応援歌", "今日もHP＋1", "しゅりなー行進曲", "回復のうた"],c:0,e:"オリジナルソングは「君と始める応援歌」。"},
+  {lv:2,q:"しゅりが「踊ってみた」で踊った曲は？",a:["青と夏", "ダンスホール", "ケセラセラ", "私は最強"],c:0,e:"踊ったのは「青と夏」。"},
+  {lv:2,q:"しゅりが韓国語を勉強するために使っているアプリは？",a:["Duolingo", "Quizlet", "mikan", "Anki"],c:0,e:"韓国語の勉強にはDuolingoを使っている。"},
+  {lv:2,q:"しゅりがよく飲んでいるコーヒーは？",a:["タリーズの缶コーヒー", "スタバのカフェラテ", "ボスのブラック", "ジョージアの微糖"],c:0,e:"よく飲んでいるのはタリーズの缶コーヒー。"},
+  {lv:3,q:"しゅりは何の動物に似ていると言われていた？",a:["うさぎ", "リス", "ハムスター", "カワウソ"],c:1,e:"正解はリス。"},
+  {lv:3,q:"名前に「り」がたくさん付いている理由は？",a:["リスに似ているから", "検索で見つけやすくするため", "「しゅり」だけだと面白くなく、ノリとリズムで付けた", "HP回復音を表している"],c:2,e:"「しゅり」だけだと面白くなくて、ノリとリズムで増えた。"},
+  {lv:3,q:"しゅりが活動で使っているSNSは？",a:["X・TikTok・YouTube・Instagram", "X・TikTok・YouTube", "X・Instagram・Facebook", "TikTok・Threads・YouTube"],c:0,e:"実はInstagramも使っている。"},
+  {lv:3,q:"「HP」の意味は？",a:["ヒットポイント", "ハッピーポイント", "ヒールポイント", "ハイパーポイント"],c:1,e:"しゅり枠ではHP＝ハッピーポイント。ヒットポイントが強いひっかけ。"},
+  {lv:3,q:"しゅりが自分用に作った生チョコの最大量は？",a:["500g", "1kg", "1.5kg", "2kg"],c:3,e:"自分用に2kg。"},
+  {lv:3,q:"しゅりが小さい頃から大切にしているぬいぐるみは？",a:["うさぎ", "くま", "ねこ", "ペンギン"],c:1,e:"小さい頃から大切にしている、くまのぬいぐるみ。"},
+  {lv:3,q:"しゅりの家の屋根裏にいた動物は？",a:["ハクビシン", "アライグマ", "ネコ", "リス"],c:1,e:"屋根裏にいたのはアライグマ。"},
+  {lv:3,q:"アライグマが家の中を通った時、特に衝撃だったものは？",a:["足跡", "鳴き声", "獣臭", "毛"],c:2,e:"家の中を一瞬通っただけでも獣臭がすごかった。"},
+  {lv:3,q:"旅行先でしゅりが餌やりをした動物は？",a:["カピバラ", "リスザル", "アルパカ", "ミーアキャット"],c:1,e:"旅行先で餌やりしたのはリスザル。"},
+  {lv:3,q:"リスザル餌やり後、しゅりの袖についていたものは？",a:["チョコ", "泥", "黄色っぽい茶色っぽい液体", "木の実"],c:2,e:"お腹を壊していたリスザル由来の黄色っぽい茶色っぽい液体。"},
+  {lv:3,q:"旅行先のホテルで、しゅりが突然泣いた理由は？",a:["料理が辛かった", "他の宿泊者のお祝いを見て感動した", "財布をなくした", "映画を見ていた"],c:1,e:"他の宿泊者のお祝いを見て感動して号泣。"},
+  {lv:3,q:"そのホテルで、しゅり本人は何のお祝いをされていた？",a:["誕生日", "結婚記念日", "活動周年", "何も祝われていない"],c:3,e:"何も祝われていない。ただの宿泊者。"},
+  {lv:3,q:"ホテルで「この先に段差があります」と言われた直後、しゅりはどうなった？",a:["段差につまずいた", "何もないところで転んだ", "スタッフにぶつかった", "立ち止まった"],c:1,e:"段差より先に、何もないところで転んだ。"},
+  {lv:3,q:"しゅりは何を見ながら歩いていて用水路に落ち、大怪我をした？",a:["スマホ", "花火", "星", "月"],c:2,e:"星を見ながら歩いていて用水路に落ちた。"},
+  {lv:3,q:"しゅりの肩は何クラスと言われた？",a:["全国クラス", "アジアクラス", "ワールドクラス", "宇宙クラス"],c:2,e:"正解はワールドクラス。"},
+  {lv:3,q:"しゅりの身体は何に例えられた？",a:["大理石", "ダイヤモンド", "鉄板", "チタン"],c:1,e:"正解はダイヤモンド。"},
+  {lv:4,q:"ギフト芸を作る前、「ありがとう」の意味で使っていた言葉は？",a:["ありがとしゅり", "あざっしゅりんりん", "さんきゅーまっちょ", "あざぴょん"],c:1,e:"正解は「あざっしゅりんりん」。"},
+  {lv:4,q:"しゅりが初めて参加したイベントは？",a:["TikTok広告イベント", "駅広告イベント", "雑誌掲載イベント", "オリジナルギフトイベント"],c:0,e:"初イベントはTikTok広告イベント。"},
+  {lv:4,q:"初めて参加したTikTok広告イベントでは何位だった？",a:["1位", "2位", "3位", "4位"],c:1,e:"結果は2位。"},
+  {lv:4,q:"オリギフイベント1回目は何位だった？",a:["1位", "2位", "3位", "4位"],c:0,e:"1回目は1位。"},
+  {lv:4,q:"オリギフイベント2回目は何位だった？",a:["1位", "2位", "3位", "4位"],c:1,e:"2回目は2位。"},
+  {lv:4,q:"イベントでしゅりがやったゲームは？",a:["恋愛シミュレーションゲーム", "脱出ゲーム", "ホラーゲーム", "育成ゲーム"],c:0,e:"イベントでやったのは恋愛シミュレーションゲーム。"},
+  {lv:4,q:"しゅりの小さい頃の夢は？",a:["ダンサー", "声優", "歌って踊れるアイドル", "漫画家"],c:2,e:"小さい頃の夢は「歌って踊れるアイドル」。"},
+  {lv:4,q:"くまのぬいぐるみを掃除していた時、しゅりとくまちゃんの時間に割り込んできたものは？",a:["宅配便", "電話", "AirPodsが読み上げた職場のグループLINE", "ホテルのアナウンス"],c:2,e:"AirPodsが職場のグループLINEを読み上げて乱入。"},
+  {lv:5,q:"サポーター特典 Rank5 は何？",a:["ツーショットイラスト", "アクリルキーホルダー", "動画でメッセージ", "限定壁紙"],c:0,e:"Rank5はツーショットイラスト。"},
+  {lv:5,q:"REALITYで「おジャ魔女どれみ」コラボがあった時、しゅりはあと何個でコラボだった？",a:["1個", "2個", "3個", "5個"],c:2,e:"正解は、あと3個。"}
+]
+
+const rankByCorrect = (correct, answered, finished) => {
+  const pct = answered ? (correct / answered) * 100 : 0;
+  if (pct < 15) return "10級";
+  if (pct < 25) return "9級";
+  if (pct < 35) return "8級";
+  if (pct < 45) return "7級";
+  if (pct < 55) return "6級";
+  if (pct < 62) return "5級";
+  if (pct < 68) return "4級";
+  if (pct < 74) return "3級";
+  if (pct < 80) return "2級";
+  if (pct < 84) return "1級";
+  if (pct < 87) return "初段";
+  if (pct < 90) return "二段";
+  if (pct < 93) return "三段";
+  if (pct < 95) return "四段";
+  if (pct < 97) return "五段";
+  if (pct < 99) return "六段";
+  if (pct < 100) return "七段";
+  return "師範";
+};
+
+const lvNames = {
+  1:"⭐ Lv.1 はじめまして級",
+  2:"⭐⭐ Lv.2 しゅり知ってる級",
+  3:"⭐⭐⭐ Lv.3 しゅりなー級",
+  4:"⭐⭐⭐⭐ Lv.4 古参級",
+  5:"👹 Lv.5 師範候補"
+};
+
+let index=0, correct=0, answered=0, selected=false, startedAt=0, timerId=null, player="";
+const $ = id => document.getElementById(id);
+
+function formatTime(sec){
+  const m=Math.floor(sec/60), s=sec%60;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+function elapsed(){
+  return Math.max(0,Math.floor((Date.now()-startedAt)/1000));
+}
+function updateTimer(){
+  $("timer").textContent=formatTime(elapsed());
+}
+function loadRanking(){
+  try{return JSON.parse(localStorage.getItem("shuriKenteiRanking")||"[]")}catch(e){return []}
+}
+function saveRanking(rows){
+  localStorage.setItem("shuriKenteiRanking",JSON.stringify(rows));
+}
+function renderRanking(targetId){
+  const box=$(targetId);
+  const rows=loadRanking().sort((a,b)=>b.score-a.score || a.time-b.time).slice(0,20);
+  if(!rows.length){
+    box.innerHTML='<div class="note">まだ記録がありません。最初の受験者になろう🐰</div>';
+    return;
+  }
+  box.innerHTML = `
+    <div class="rankrow head"><div>順位</div><div>名前</div><div style="text-align:right">認定</div><div style="text-align:right">タイム</div></div>
+    ${rows.map((r,i)=>`
+      <div class="rankrow">
+        <div class="place">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</div>
+        <div class="name">${escapeHtml(r.name)}</div>
+        <div class="tiny"><b>${escapeHtml(r.rank)}</b><br>${r.score}点</div>
+        <div class="tiny">${formatTime(r.time)}</div>
+      </div>`).join("")}`;
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+}
+function startQuiz(){
+  player=$("playerName").value.trim()||"ななしゅりなー";
+  index=0;correct=0;answered=0;selected=false;startedAt=Date.now();
+  $("startScreen").classList.add("hidden");
+  $("resultScreen").classList.add("hidden");
+  $("quizScreen").classList.remove("hidden");
+  timerId=setInterval(updateTimer,1000); updateTimer();
+  renderQuestion();
+}
+function renderQuestion(){
+  selected=false;
+  const item=questions[index];
+  $("progressText").textContent=`${index+1} / ${questions.length}`;
+  $("scoreText").textContent=`${Math.round(correct/questions.length*100)}点`;
+  $("progressBar").style.width=`${(index/questions.length)*100}%`;
+  $("levelLabel").textContent=lvNames[item.lv];
+  $("questionText").textContent=`Q${index+1}. ${item.q}`;
+  $("feedback").classList.add("hidden");
+  $("nextRow").classList.add("hidden");
+  $("stopBtn").classList.toggle("hidden", answered<5);
+  const choices=$("choices");
+  choices.innerHTML="";
+  item.a.forEach((txt,i)=>{
+    const b=document.createElement("button");
+    b.className="choice";
+    b.textContent=`${String.fromCharCode(65+i)}. ${txt}`;
+    b.onclick=()=>choose(i,b);
+    choices.appendChild(b);
+  });
+}
+function choose(i,btn){
+  if(selected)return;
+  selected=true; answered++;
+  const item=questions[index];
+  const buttons=[...document.querySelectorAll(".choice")];
+  buttons.forEach(b=>b.disabled=true);
+  buttons[item.c].classList.add("correct");
+  if(i===item.c){
+    correct++;
+  }else{
+    btn.classList.add("wrong");
+  }
+  $("scoreText").textContent=`${Math.round(correct/questions.length*100)}点`;
+  $("feedback").innerHTML=`<b>${i===item.c?"✅ 正解！":"❌ ざんねん！"}</b>${escapeHtml(item.e)}`;
+  $("feedback").classList.remove("hidden");
+  $("nextRow").classList.remove("hidden");
+  $("nextBtn").textContent = index===questions.length-1 ? "結果を見る" : "次の問題へ";
+  $("stopBtn").classList.toggle("hidden", answered<5);
+}
+function nextQuestion(){
+  if(!selected)return;
+  if(index===questions.length-1){finish(true);return;}
+  index++;
+  renderQuestion();
+}
+function confirmStop(){
+  if(answered<5)return;
+  if(confirm(`ここで判定しますか？\n現在 ${answered}問回答済みです。\n途中判定は「暫定認定」になります。`)){
+    finish(false);
+  }
+}
+function finish(finished){
+  clearInterval(timerId);
+  const t=elapsed();
+  const score = finished ? Math.round((correct/questions.length)*100) : Math.round((correct/answered)*100);
+  const rank=rankByCorrect(correct,answered,finished);
+
+  $("quizScreen").classList.add("hidden");
+  $("resultScreen").classList.remove("hidden");
+  $("resultType").textContent=finished?"正式認定":"暫定認定";
+  $("resultRank").textContent=rank;
+  $("resultScore").textContent=finished?`${score}点 / 100点`:`正解率 ${score}%`;
+  $("resultNote").textContent=finished
+    ?"全50問完走！ランキング登録対象です。"
+    :`${answered}問時点での暫定判定です。ランキングには登録されません。`;
+  $("statCorrect").textContent=correct;
+  $("statAnswered").textContent=answered;
+  $("statTime").textContent=formatTime(t);
+
+  if(finished){
+    const rows=loadRanking();
+    rows.push({name:player,score,rank,time:t,ts:Date.now()});
+    saveRanking(rows);
+    $("rankingPanel").classList.remove("hidden");
+  }else{
+    $("rankingPanel").classList.add("hidden");
+  }
+
+  const share = finished
+    ? `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${rank}\n💯 ${score}点 / 100点\n⏱ ${formatTime(t)}\n#しゅり検定`
+    : `🐰 第1回しゅり検定\n${player} の途中結果\n🎓 暫定 ${rank}\n✅ ${correct}/${answered}問正解\n#しゅり検定`;
+  $("shareText").textContent=share;
+  renderRanking("resultRanking");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+async function copyResult(){
+  const text=$("shareText").textContent;
+  try{
+    await navigator.clipboard.writeText(text);
+    $("copyBtn").textContent="コピーした！";
+    setTimeout(()=>$("copyBtn").textContent="結果をコピー",1400);
+  }catch(e){
+    alert("コピーできませんでした。長押しでコピーしてください。");
+  }
+}
+function retry(){
+  $("resultScreen").classList.add("hidden");
+  $("startScreen").classList.remove("hidden");
+  renderRanking("startRanking");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("startBtn").onclick=startQuiz;
+$("nextBtn").onclick=nextQuestion;
+$("stopBtn").onclick=confirmStop;
+$("retryBtn").onclick=retry;
+$("copyBtn").onclick=copyResult;
+$("clearRankingBtn").onclick=()=>{
+  if(confirm("この端末のランキング記録を消しますか？")){
+    localStorage.removeItem("shuriKenteiRanking");
+    renderRanking("startRanking");
+  }
+};
+$("playerName").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz()});
+renderRanking("startRanking");
+</script>
+</body>
+</html>
