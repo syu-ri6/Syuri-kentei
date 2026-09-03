@@ -237,6 +237,39 @@
   .rabbit-sleep{animation:rabbitSleep 3s ease both}
   .rabbit-final{animation:rabbitFinal 2.4s ease both}
 
+
+  .comboBadge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 10px;border-radius:999px;
+    background:#fff7d8;border:1px solid #f1d77a;
+    color:#6d5200;font-size:12px;font-weight:1000;
+    opacity:0;transform:translateY(-4px);transition:.2s;
+    margin:0 0 10px;
+  }
+  .comboBadge.show{opacity:1;transform:translateY(0)}
+  .comboBadge.hot{font-size:13px;box-shadow:0 0 0 4px rgba(255,191,63,.12)}
+  .secretLine{
+    margin-top:7px;padding:8px 10px;border-radius:11px;
+    background:#fff9df;border:1px dashed #e7c552;
+    font-size:12px;font-weight:900;color:#735400;
+  }
+  .typeCard{
+    margin-top:14px;padding:15px;border-radius:17px;
+    background:linear-gradient(135deg,#faf8ff,#fff8fb);
+    border:1px solid var(--line);
+  }
+  .typeKicker{font-size:10px;letter-spacing:.14em;font-weight:1000;color:var(--accent2)}
+  .typeName{font-size:20px;font-weight:1000;margin:4px 0 5px}
+  .typeDesc{font-size:13px;line-height:1.65;color:var(--muted)}
+  .titleWrap{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .hiddenTitle{
+    display:inline-flex;padding:6px 9px;border-radius:999px;
+    background:#fff3c9;border:1px solid #efd67a;
+    font-size:11px;font-weight:1000;color:#775800;
+  }
+  .eventCard.mission{border:2px solid #cbbdff}
+  .eventCard.warning{border:2px solid #ffd36b}
+
 </style>
 </head>
 <body>
@@ -252,7 +285,7 @@
       <h1>🐰 第1回 しゅり検定</h1>
       <div class="sub">
         しゅりのこと、どこまで知ってる？<br>
-        基本情報から「そこ覚えてるの！？」まで全50問。
+        基本情報から「そこ覚えてるの！？」まで全50問。<br>点数はガチ、途中の反応はだいぶ自由。
       </div>
       <div class="badge-row">
         <span class="mini">全50問</span>
@@ -304,8 +337,8 @@
         </div>
         <div class="ptBadge"><div id="pointText">0 pt</div><div style="font-size:10px;font-weight:800;margin-top:2px">TOTAL</div></div>
       </div>
-      <div id="systemBox" class="systemBox"><div id="systemText" class="systemText">受験者を確認。まだ何も疑っていません。</div></div>
-
+      <div id="systemBox" class="systemBox hidden"><div id="systemText" class="systemText"></div></div>
+<div id="comboBadge" class="comboBadge">🔥 COMBO <span id="comboCount">0</span></div>
       <div class="level" id="levelLabel"></div>
       <div class="q" id="questionText"></div>
       <div class="choices" id="choices"></div>
@@ -329,6 +362,13 @@
         <div id="resultSubtitle" style="font-size:16px;font-weight:900;color:var(--accent2);margin-top:-2px"></div>
         <div class="score" id="resultScore"></div>
         <div class="note" id="resultNote"></div>
+      </div>
+
+      <div class="typeCard">
+        <div class="typeKicker">KNOWLEDGE TYPE</div>
+        <div id="knowledgeTypeName" class="typeName"></div>
+        <div id="knowledgeTypeDesc" class="typeDesc"></div>
+        <div id="hiddenTitles" class="titleWrap"></div>
       </div>
 
       <div class="stats">
@@ -462,71 +502,93 @@ const lvNames = {
 
 let index=0, correct=0, answered=0, selected=false, startedAt=0, timerId=null, player="";
 let points=0, lastRank="10級";
+let maxCombo=0;
+let answerLog=[];
+let categoryStats={basic:{right:0,total:0},stream:{right:0,total:0},episode:{right:0,total:0},history:{right:0,total:0}};
 const $ = id => document.getElementById(id);
 
-const milestoneEvents = {
-  10:{kicker:"SYSTEM CHECK",title:"基礎情報の照合完了",body:"基礎エリア終了。\nここから少しだけ記憶力を使います。"},
-  25:{kicker:"MISSION",title:"しゅり生態調査を継続せよ",body:"中盤到達。\nここから「それ覚えてる？」が増えていきます。"},
-  40:{kicker:"WARNING",title:"古参領域に入りました",body:"ここから『知らん』が正常です。\n知っていた場合、かなり見ています。"},
-  48:{kicker:"SYSTEM",title:"師範候補を確認",body:"残りわずか。\n本当にそこまで覚えている必要はありましたか？"}
-};
-const questionReactions = {
-  0:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  1:{ok:"配信先：REALITY。",ng:"配信先の照合に失敗。"},
-  2:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  3:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  4:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  5:{ok:"回復コールを確認。",ng:"回復コールが一致しません。"},
-  6:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  7:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  8:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  9:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  10:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  11:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  12:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  13:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  14:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  15:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  16:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  17:{ok:"アバター特徴を確認。",ng:"アバター特徴が一致しません。"},
-  18:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  19:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  20:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  21:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  22:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  23:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  24:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  25:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  26:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  27:{ok:"HP定義：ハッピーポイント。",ng:"一般ゲーム定義を検出。"},
-  28:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  29:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  30:{ok:"屋根裏個体：アライグマ。",ng:"屋根裏個体が一致しません。"},
-  31:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  32:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  33:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  34:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  35:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  36:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  37:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  38:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  39:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  40:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  41:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  42:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  43:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  44:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  45:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  46:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  47:{ok:"回答データ一致。",ng:"回答データ不一致。"},
-  48:{ok:"Rank5特典を確認。",ng:"Rank5特典が一致しません。"},
-  49:{ok:"回答データ一致。",ng:"回答データ不一致。"}
-};
-function systemReaction(item, choiceIndex, isCorrect){
-  const r=questionReactions[index];
-  if(!r) return isCorrect ? "正解。" : "不正解。";
-  return isCorrect ? r.ok : r.ng;
+
+function categoryForQuestion(i){
+  if(i<=12) return "basic";
+  if(i<=27) return "stream";
+  if(i<=39) return "episode";
+  return "history";
 }
+const categoryLabels={
+  basic:"基礎",stream:"配信・活動",episode:"エピソード",history:"古参・履歴"
+};
+
+function specialSystemReaction(qIndex, choiceIndex, isCorrect){
+  // SYSTEM appears only when it has something worth saying.
+  if(qIndex===27 && choiceIndex===0 && !isCorrect) return "一般ゲーム知識を検出。ここはしゅり枠です。";
+  if(qIndex===28 && !isCorrect && choiceIndex===0) return "常識的な量を選択しました。対象者：しゅり。";
+  if(qIndex===38 && choiceIndex===3 && !isCorrect) return "宇宙クラスは申告値を超えています。";
+  if(qIndex===48 && isCorrect) return "Rank5履修データを確認。かなり見ています。";
+  if(qIndex===49 && isCorrect) return "最終記憶データ一致。師範候補として記録します。";
+  return "";
+}
+
+function hiddenComment(qIndex, choiceIndex, isCorrect, lv){
+  if(isCorrect && lv===1 && answered>=8) return Math.random()<.22 ? "正解だけど、そこはまあ知っててほしいww" : "";
+  if(!isCorrect && lv===1) return "そこ落とすんかい！";
+  if(isCorrect && lv>=4) return Math.random()<.55 ? "なんでそこ知ってんの？" : "";
+  if(qIndex===27 && choiceIndex===0) return "ヒットポイント押した人、ゲームに帰ってください。";
+  if(qIndex===28 && choiceIndex===0) return "500gで止めると思った？";
+  if(qIndex===38 && choiceIndex===3) return "宇宙まで行かすなww";
+  return "";
+}
+
+function typeResult(){
+  const s=categoryStats;
+  const rate=k=>s[k].total ? s[k].right/s[k].total : 0;
+  const rates={basic:rate("basic"),stream:rate("stream"),episode:rate("episode"),history:rate("history")};
+  const avg=(rates.basic+rates.stream+rates.episode+rates.history)/4;
+
+  if(answered>=40 && avg>=.88){
+    return {name:"本人疑惑型",desc:"基礎・配信・エピソード・古参履歴まで全部強いです。しゅり本人、または記憶の倉庫です。"};
+  }
+  if(rates.history>=.78 && rates.basic<.72){
+    return {name:"偏食型しゅりなー",desc:"基本問題を落とすのに、古参・履歴問題だけ妙に強いです。知識の取り方がだいぶ偏っています。"};
+  }
+  if(rates.episode>=Math.max(rates.basic,rates.stream,rates.history) && rates.episode>=.68){
+    return {name:"エピソード記憶型",desc:"珍事件・旅行・事故など、しゅりの『なんでそうなった』をよく覚えています。"};
+  }
+  if(rates.history>=Math.max(rates.basic,rates.stream,rates.episode) && rates.history>=.65){
+    return {name:"古参型",desc:"イベント順位や昔の言葉、特典まで強いです。活動履歴をちゃんと見てきたタイプ。"};
+  }
+  if(rates.stream>=Math.max(rates.basic,rates.episode,rates.history) && rates.stream>=.68){
+    return {name:"観測型",desc:"配信習慣・アバター・SNS・いつもの言動に強いです。普段のしゅりをよく見ています。"};
+  }
+  if(rates.basic>=.9){
+    return {name:"基礎ガチ型",desc:"簡単問題をほとんど落としません。派手さはないけど土台が異様に固いです。"};
+  }
+  return {name:"バランス型しゅりなー",desc:"特定ジャンルだけではなく、しゅり知識を広く拾っています。伸びしろも含めてバランス型。"};
+}
+
+function hiddenTitlesForResult(){
+  const titles=[];
+  const s=categoryStats;
+  const rate=k=>s[k].total ? s[k].right/s[k].total : 0;
+  if(maxCombo>=10) titles.push("🔥 10 COMBO達成");
+  else if(maxCombo>=5) titles.push("🔥 5 COMBO達成");
+  if(rate("basic")===1 && s.basic.total>=8) titles.push("📘 基礎ノーミス");
+  if(rate("episode")>=.85 && s.episode.total>=8) titles.push("🧠 珍事件保存班");
+  if(rate("history")>=.85 && s.history.total>=6) titles.push("🏺 古参反応あり");
+  const hardCorrect=answerLog.filter(x=>x.lv>=4&&x.correct).length;
+  const easyWrong=answerLog.filter(x=>x.lv===1&&!x.correct).length;
+  if(hardCorrect>=5 && easyWrong>=3) titles.push("🍽 知識の偏食");
+  if(points>=120) titles.push("👀 本人疑惑");
+  return titles.slice(0,4);
+}
+
+const milestoneEvents = {
+  10:{kicker:"CHECK POINT",title:"基礎エリア突破",body:"ここまではウォーミングアップ。\n次から「見てれば分かる」だけでは足りなくなります。"},
+  20:{kicker:"MISSION UPDATE",title:"しゅり観測、継続中",body:"配信・活動データの照合へ。\nまだ帰れます。たぶん。"},
+  30:{kicker:"MEMORY AREA",title:"エピソード記憶区画",body:"ここから珍事件が増えます。\n覚えていた場合、記憶の使い道は一旦置いておきます。"},
+  40:{kicker:"WARNING",title:"古参領域に入りました",body:"ここから『知らん』が正常です。\n知っていた場合、かなり見ています。"},
+  48:{kicker:"FINAL CHECK",title:"師範候補を確認",body:"残りわずか。\n本当にそこまで覚えている必要はありましたか？"}
+};
+
 function updateLiveHud(showToast=true){
   const rank=rankByPoints(points);
   const info=nextRankInfo(points);
@@ -553,6 +615,10 @@ function showEvent(data){
   $("eventKicker").textContent=data.kicker;
   $("eventTitle").textContent=data.title;
   $("eventBody").textContent=data.body;
+  const card=document.querySelector(".eventCard");
+  card.className="eventCard";
+  if(data.kicker.includes("WARNING")) card.classList.add("warning");
+  if(data.kicker.includes("MISSION")) card.classList.add("mission");
   $("eventOverlay").classList.remove("hidden");
 }
 function maybeShowMilestone(){
@@ -671,18 +737,17 @@ function maybeRabbitOnQuestion(){
 
 function rabbitAfterAnswer(isCorrect, lv){
   if(isCorrect){
-    correctStreak++; wrongStreak=0;
     if(correctStreak===5) showRabbit("bounce","5連続！","🐰");
+    else if(correctStreak===10) showRabbit("bounce","10連続！？","🐰");
     else if(lv>=4 && Math.random()<0.45) showRabbit("peek","そこ知ってるんだ。","🐰");
   }else{
-    wrongStreak++; correctStreak=0;
     if(wrongStreak===3) showRabbit("peek","いっしょに悩む？","🐰");
   }
 }
 
 function startQuiz(){
   player=$("playerName").value.trim()||"ななしゅりなー";
-  index=0;correct=0;answered=0;selected=false;points=0;lastRank="10級";startedAt=Date.now();
+  index=0;correct=0;answered=0;selected=false;points=0;lastRank="10級";correctStreak=0;wrongStreak=0;maxCombo=0;answerLog=[];categoryStats={basic:{right:0,total:0},stream:{right:0,total:0},episode:{right:0,total:0},history:{right:0,total:0}};startedAt=Date.now();
   $("startScreen").classList.add("hidden");
   $("resultScreen").classList.add("hidden");
   $("quizScreen").classList.remove("hidden");
@@ -701,6 +766,8 @@ function renderQuestion(){
   $("levelLabel").textContent=lvNames[item.lv];
   $("questionText").textContent=`Q${index+1}. ${item.q}`;
   $("feedback").classList.add("hidden");
+  $("comboBadge").classList.toggle("show", correctStreak>=2);
+  $("comboCount").textContent=correctStreak;
   $("nextRow").classList.add("hidden");
   $("systemBox").className="systemBox hidden";
   $("systemText").textContent="";
@@ -724,21 +791,50 @@ function choose(i,btn){
   buttons.forEach(b=>b.disabled=true);
   buttons[item.c].classList.add("correct");
   const isCorrect=i===item.c;
+
+  const cat=categoryForQuestion(index);
+  categoryStats[cat].total++;
+  if(isCorrect) categoryStats[cat].right++;
+  answerLog.push({index,choice:i,correct:isCorrect,lv:item.lv,cat});
+
   if(isCorrect){
     correct++;
     points+=item.lv;
+    correctStreak++;
+    wrongStreak=0;
+    maxCombo=Math.max(maxCombo,correctStreak);
   }else{
     btn.classList.add("wrong");
+    wrongStreak++;
+    correctStreak=0;
   }
+
   $("scoreText").textContent=`${points}pt / ${MAX_POINTS}pt`;
   updateLiveHud(true);
-  const reaction=systemReaction(item,i,isCorrect);
-  $("systemBox").className=`systemBox ${isCorrect?"good":"bad"}`;
-  $("systemBox").classList.remove("hidden");
-  $("systemText").textContent=reaction;
-  $("feedback").innerHTML=`<b>${isCorrect?"✅ 正解！":"❌ ざんねん！"} +${isCorrect?item.lv:0}pt</b>${escapeHtml(item.e)}`;
+
+  // SYSTEM only appears for genuinely special reactions.
+  const special= specialSystemReaction(index,i,isCorrect);
+  if(special){
+    $("systemBox").className=`systemBox ${isCorrect?"good":"bad"}`;
+    $("systemBox").classList.remove("hidden");
+    $("systemText").textContent=special;
+  }else{
+    $("systemBox").className="systemBox hidden";
+    $("systemText").textContent="";
+  }
+
+  const hidden=hiddenComment(index,i,isCorrect,item.lv);
+  $("feedback").innerHTML=
+    `<b>${isCorrect?"✅ 正解！":"❌ ざんねん！"} +${isCorrect?item.lv:0}pt</b>`+
+    `${escapeHtml(item.e)}`+
+    `${hidden?`<div class="secretLine">🐰 ${escapeHtml(hidden)}</div>`:""}`;
   $("feedback").classList.remove("hidden");
-  rabbitAfterAnswer(i===item.c, item.lv);
+
+  $("comboCount").textContent=correctStreak;
+  $("comboBadge").classList.toggle("show",correctStreak>=2);
+  $("comboBadge").classList.toggle("hot",correctStreak>=5);
+
+  rabbitAfterAnswer(isCorrect,item.lv);
   $("nextRow").classList.remove("hidden");
   $("nextBtn").textContent = index===questions.length-1 ? "結果を見る" : "次の問題へ";
   $("stopBtn").classList.toggle("hidden", answered<5);
@@ -773,13 +869,20 @@ function finish(finished){
   $("statCorrect").textContent=correct;
   $("statAnswered").textContent=`${answered}/50`;
   $("statTime").textContent=formatTime(t);
+  const kt=typeResult();
+  $("knowledgeTypeName").textContent=kt.name;
+  $("knowledgeTypeDesc").textContent=kt.desc;
+  const titles=hiddenTitlesForResult();
+  $("hiddenTitles").innerHTML=titles.length
+    ? titles.map(x=>`<span class="hiddenTitle">${escapeHtml(x)}</span>`).join("")
+    : `<span class="hiddenTitle">🐰 まだ隠し称号なし</span>`;
 
   const rows=loadRanking();
   rows.push({name:player,score:points,rank,time:t,answered,correct,finished,ts:Date.now()});
   saveRanking(rows);
   $("rankingPanel").classList.remove("hidden");
 
-  const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${rankSubtitles[rank]||""}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n⏱ ${formatTime(t)}\n#しゅり検定`;
+  const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${rankSubtitles[rank]||""}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n🧠 ${kt.name}\n⏱ ${formatTime(t)}\n#しゅり検定`;
   $("shareText").textContent=share;
   renderRanking("resultRanking");
   window.scrollTo({top:0,behavior:"smooth"});
