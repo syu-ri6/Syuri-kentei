@@ -129,6 +129,31 @@
     display:inline-flex;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;
     background:#fff1f7;color:#be3f77
   }
+
+  .hudRow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:10px 0 14px}
+  .rankHud{border:1px solid var(--line);background:#fffafd;border-radius:16px;padding:10px 12px}
+  .rankHudTop{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:11px;color:var(--muted);font-weight:800}
+  .rankHudMain{display:flex;align-items:baseline;gap:8px;margin-top:3px}
+  .rankHudMain strong{font-size:20px;color:var(--accent2)}
+  .rankHudMain span{font-size:11px;color:var(--muted)}
+  .rankGauge{height:7px;border-radius:999px;background:#efe8f2;overflow:hidden;margin-top:7px}
+  .rankGauge>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:.35s}
+  .ptBadge{min-width:78px;text-align:center;border-radius:16px;padding:10px 9px;background:#fff6cf;border:1px solid #f5df8a;font-weight:1000;color:#735400}
+  .systemBox{margin:12px 0 0;border:1px solid #ded6f7;background:linear-gradient(135deg,#faf8ff,#fff);border-radius:16px;padding:12px 13px;position:relative;overflow:hidden}
+  .systemBox::before{content:"SYSTEM";display:block;font-size:10px;letter-spacing:.14em;font-weight:1000;color:var(--accent2);margin-bottom:5px}
+  .systemBox.good{border-color:#a9dfc6;background:#f2fbf7}
+  .systemBox.bad{border-color:#f1b3bf;background:#fff6f7}
+  .systemBox.event{border-color:#ffd86f;background:linear-gradient(135deg,#fffaf0,#fff)}
+  .systemText{font-size:14px;line-height:1.6;font-weight:750}
+  .eventOverlay{position:fixed;inset:0;background:rgba(35,25,38,.62);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}
+  .eventCard{width:min(560px,100%);background:#fff;border-radius:24px;padding:22px;border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.22);text-align:center}
+  .eventKicker{font-size:11px;letter-spacing:.16em;font-weight:1000;color:var(--accent2)}
+  .eventTitle{font-size:25px;font-weight:1000;margin:8px 0}
+  .eventBody{font-size:14px;line-height:1.7;color:var(--muted);white-space:pre-line;margin-bottom:16px}
+  .rankUpToast{position:fixed;left:50%;top:18px;transform:translateX(-50%) translateY(-20px);z-index:120;background:#fff;border:1px solid var(--line);box-shadow:0 12px 34px rgba(64,39,56,.18);border-radius:999px;padding:10px 16px;font-weight:1000;opacity:0;pointer-events:none;transition:.25s;white-space:nowrap}
+  .rankUpToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .choice small{display:block;margin-top:4px;font-weight:600;color:var(--muted)}
+
   @media (max-width:560px){
     h1{font-size:27px}
     .q{font-size:18px}
@@ -150,7 +175,7 @@
       </div>
       <div class="badge-row">
         <span class="mini">全50問</span>
-        <span class="mini">100点満点</span>
+        <span class="mini">Lv別ポイント制</span>
         <span class="mini">5問から途中判定OK</span>
         <span class="mini">最高位：師範</span>
       </div>
@@ -170,7 +195,6 @@
     <div class="panel">
       <div class="rankingTitle">
         <strong>🏆 この端末のランキング</strong>
-        <button class="secondary" id="clearRankingBtn" style="padding:8px 10px;font-size:12px">リセット</button>
       </div>
       <div id="startRanking" class="ranking"></div>
     </div>
@@ -181,13 +205,24 @@
       <div class="topbar">
         <div class="progressBox">
           <div class="progressLabel">
-            <span id="progressText">1 / 20</span>
+            <span id="progressText">1 / 50</span>
             <span id="scoreText">0点</span>
           </div>
           <div class="progress"><div id="progressBar"></div></div>
         </div>
         <div class="timer" id="timer">00:00</div>
       </div>
+
+
+      <div class="hudRow">
+        <div class="rankHud">
+          <div class="rankHudTop"><span>現在の認定</span><span id="nextRankText">次の級まで</span></div>
+          <div class="rankHudMain"><strong id="liveRank">10級</strong><span id="liveSubtitle">しゅり観測開始</span></div>
+          <div class="rankGauge"><div id="rankGaugeBar"></div></div>
+        </div>
+        <div class="ptBadge"><div id="pointText">0 pt</div><div style="font-size:10px;font-weight:800;margin-top:2px">TOTAL</div></div>
+      </div>
+      <div id="systemBox" class="systemBox"><div id="systemText" class="systemText">受験者を確認。まだ何も疑っていません。</div></div>
 
       <div class="level" id="levelLabel"></div>
       <div class="q" id="questionText"></div>
@@ -231,8 +266,8 @@
 
     <div class="panel" id="rankingPanel">
       <div class="rankingTitle">
-        <strong>🏆 完走ランキング</strong>
-        <span class="pill">同点はタイム順</span>
+        <strong>🏆 しゅり検定ランキング</strong>
+        <span class="pill">同点は回答数→タイム</span>
       </div>
       <div id="resultRanking" class="ranking"></div>
     </div>
@@ -293,28 +328,26 @@ const questions = [
   {lv:5,q:"REALITYで「おジャ魔女どれみ」コラボがあった時、しゅりはあと何個でコラボだった？",a:["1個", "2個", "3個", "5個"],c:2,e:"正解は、あと3個。"}
 ]
 
-const rankByCorrect = (correct, answered, finished) => {
-  const pct = answered ? (correct / answered) * 100 : 0;
-  if (pct < 15) return "10級";
-  if (pct < 25) return "9級";
-  if (pct < 35) return "8級";
-  if (pct < 45) return "7級";
-  if (pct < 55) return "6級";
-  if (pct < 62) return "5級";
-  if (pct < 68) return "4級";
-  if (pct < 74) return "3級";
-  if (pct < 80) return "2級";
-  if (pct < 84) return "1級";
-  if (pct < 87) return "初段";
-  if (pct < 90) return "二段";
-  if (pct < 93) return "三段";
-  if (pct < 95) return "四段";
-  if (pct < 97) return "五段";
-  if (pct < 99) return "六段";
-  if (pct < 100) return "七段";
-  return "師範";
-};
-
+const MAX_POINTS = questions.reduce((sum,q)=>sum+q.lv,0);
+const rankThresholds = [
+  {min:123, rank:"師範"}, {min:120, rank:"七段"}, {min:116, rank:"六段"},
+  {min:112, rank:"五段"}, {min:107, rank:"四段"}, {min:102, rank:"三段"},
+  {min:96, rank:"二段"}, {min:89, rank:"初段"}, {min:81, rank:"1級"},
+  {min:72, rank:"2級"}, {min:63, rank:"3級"}, {min:54, rank:"4級"},
+  {min:45, rank:"5級"}, {min:36, rank:"6級"}, {min:27, rank:"7級"},
+  {min:18, rank:"8級"}, {min:9, rank:"9級"}, {min:0, rank:"10級"}
+];
+function rankByPoints(points){
+  return rankThresholds.find(x=>points>=x.min).rank;
+}
+function nextRankInfo(points){
+  const ascending=[...rankThresholds].reverse();
+  const currentIndex=ascending.findIndex(x=>x.rank===rankByPoints(points));
+  if(currentIndex===ascending.length-1) return {rank:"師範",need:0,min:123,prev:123};
+  const next=ascending[currentIndex+1];
+  const cur=ascending[currentIndex];
+  return {rank:next.rank,need:Math.max(0,next.min-points),min:next.min,prev:cur.min};
+}
 
 const rankSubtitles = {
   "10級":"しゅり観測開始",
@@ -346,7 +379,81 @@ const lvNames = {
 };
 
 let index=0, correct=0, answered=0, selected=false, startedAt=0, timerId=null, player="";
+let points=0, lastRank="10級";
 const $ = id => document.getElementById(id);
+
+const milestoneEvents = {
+  10:{kicker:"SYSTEM CHECK",title:"基礎情報の照合完了",body:"ここまではウォーミングアップ。\nまだ帰れます。"},
+  25:{kicker:"MISSION",title:"しゅり生態調査を継続せよ",body:"ここから先、知識ではなく記憶が要求されます。\n健闘を祈ります。"},
+  40:{kicker:"WARNING",title:"古参領域に入りました",body:"ここから『知らん』が正常です。\n知っていた場合、かなり見ています。"},
+  48:{kicker:"SYSTEM",title:"師範候補を確認",body:"残りわずか。\n本当にそこまで覚えている必要はありましたか？"}
+};
+const specialReactions = {
+  0:{2:"14回。数えた人えらい。",0:"惜しい。応援が2回ほど足りません。",1:"あと1がんばれ。",3:"1がんばれ多いです。"},
+  1:{2:"正解。りの在庫は十分です。"},
+  11:{1:"日付変更ではなく、バトンタッチ‼️です。担当者でもいる？"},
+  16:{0:"正解。ぱっぱらぱっぱっぱー‼️ HP回復処理を実行しました。"},
+  24:{1:"正解。見た目はうさぎ、判定はリス。"},
+  27:{0:"一般ゲーム知識を検出。ここはしゅり枠です。",1:"正解。HP＝ハッピーポイント。一般常識との戦いに勝ちました。"},
+  28:{3:"正解。なお、プレゼント用ではありません。自分用2kgです。",0:"常識的な量を選択しました。残念ながら相手はしゅりです。",1:"まだ常識の範囲です。",2:"かなり近づきましたが、もう500gあります。"},
+  36:{1:"正解。段差に到達する前に転倒しました。先取りがすごい。"},
+  38:{2:"正解。ワールドクラス。まだ地球にはいます。",3:"宇宙までは行っていません。話を盛りすぎです。"},
+  39:{1:"正解。凝りすぎて全身ダイヤモンド判定。"},
+  48:{0:"正解。Rank5まで履修済み。かなり見ています。",1:"それっぽい。ちゃんと引っかけです。",2:"こちらも引っかけ。惜しい。"},
+  49:{2:"正解。あと3個。ここまで覚えてるの、だいぶ古参です。"}
+};
+function systemReaction(item, choiceIndex, isCorrect){
+  const special=specialReactions[index]?.[choiceIndex];
+  if(special) return special;
+  const correctPool=[
+    "正解。しゅりデータの照合に成功しました。",
+    "正解。ちゃんと見ています。",
+    "正解。記憶領域にしゅり情報を確認。",
+    "正解。SYSTEM、ちょっと引いています。",
+    "正解。そこ知ってるんだ。"
+  ];
+  const wrongPool=[
+    "不正解。しゅりデータとの不一致を検出。",
+    "違います。まあ普通は知らなくても生きていけます。",
+    "不正解。今ここで覚えたので実質プラスです。",
+    "違います。選択の気持ちは分からなくもない。",
+    "不正解。SYSTEMは静かに記録しました。"
+  ];
+  const pool=isCorrect?correctPool:wrongPool;
+  return pool[(index+choiceIndex)%pool.length];
+}
+function updateLiveHud(showToast=true){
+  const rank=rankByPoints(points);
+  const info=nextRankInfo(points);
+  $("pointText").textContent=`${points} pt`;
+  $("liveRank").textContent=rank;
+  $("liveSubtitle").textContent=rankSubtitles[rank]||"";
+  if(info.need===0){
+    $("nextRankText").textContent="最高位到達";
+    $("rankGaugeBar").style.width="100%";
+  }else{
+    $("nextRankText").textContent=`${info.rank}まで あと${info.need}pt`;
+    const span=Math.max(1,info.min-info.prev);
+    const pct=Math.max(0,Math.min(100,((points-info.prev)/span)*100));
+    $("rankGaugeBar").style.width=`${pct}%`;
+  }
+  if(showToast && rank!==lastRank){
+    $("rankUpToast").textContent=`昇級！ ${lastRank} → ${rank}`;
+    $("rankUpToast").classList.add("show");
+    setTimeout(()=>$("rankUpToast").classList.remove("show"),1500);
+    lastRank=rank;
+  }
+}
+function showEvent(data){
+  $("eventKicker").textContent=data.kicker;
+  $("eventTitle").textContent=data.title;
+  $("eventBody").textContent=data.body;
+  $("eventOverlay").classList.remove("hidden");
+}
+function maybeShowMilestone(){
+  const data=milestoneEvents[answered];
+  if(data) showEvent(data);
+}
 
 function formatTime(sec){
   const m=Math.floor(sec/60), s=sec%60;
@@ -366,19 +473,19 @@ function saveRanking(rows){
 }
 function renderRanking(targetId){
   const box=$(targetId);
-  const rows=loadRanking().sort((a,b)=>b.score-a.score || a.time-b.time).slice(0,20);
+  const rows=loadRanking().sort((a,b)=>b.score-a.score || (b.answered||50)-(a.answered||50) || a.time-b.time).slice(0,20);
   if(!rows.length){
     box.innerHTML='<div class="note">まだ記録がありません。最初の受験者になろう🐰</div>';
     return;
   }
   box.innerHTML = `
-    <div class="rankrow head"><div>順位</div><div>名前</div><div style="text-align:right">認定</div><div style="text-align:right">タイム</div></div>
+    <div class="rankrow head"><div>順位</div><div>名前</div><div style="text-align:right">認定</div><div style="text-align:right">記録</div></div>
     ${rows.map((r,i)=>`
       <div class="rankrow">
         <div class="place">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</div>
         <div class="name">${escapeHtml(r.name)}</div>
-        <div class="tiny"><b>${escapeHtml(r.rank)}</b><br>${r.score}点</div>
-        <div class="tiny">${formatTime(r.time)}</div>
+        <div class="tiny"><b>${escapeHtml(r.rank)}</b><br>${r.score}pt</div>
+        <div class="tiny">${r.answered||50}/50問<br>${formatTime(r.time)}</div>
       </div>`).join("")}`;
 }
 function escapeHtml(s){
@@ -386,18 +493,21 @@ function escapeHtml(s){
 }
 function startQuiz(){
   player=$("playerName").value.trim()||"ななしゅりなー";
-  index=0;correct=0;answered=0;selected=false;startedAt=Date.now();
+  index=0;correct=0;answered=0;selected=false;points=0;lastRank="10級";startedAt=Date.now();
   $("startScreen").classList.add("hidden");
   $("resultScreen").classList.add("hidden");
   $("quizScreen").classList.remove("hidden");
   timerId=setInterval(updateTimer,1000); updateTimer();
+  updateLiveHud(false);
+  $("systemBox").className="systemBox";
+  $("systemText").textContent="受験者を確認。まだ何も疑っていません。";
   renderQuestion();
 }
 function renderQuestion(){
   selected=false;
   const item=questions[index];
   $("progressText").textContent=`${index+1} / ${questions.length}`;
-  $("scoreText").textContent=`${Math.round(correct/questions.length*100)}点`;
+  $("scoreText").textContent=`${points}pt / ${MAX_POINTS}pt`;
   $("progressBar").style.width=`${(index/questions.length)*100}%`;
   $("levelLabel").textContent=lvNames[item.lv];
   $("questionText").textContent=`Q${index+1}. ${item.q}`;
@@ -421,17 +531,24 @@ function choose(i,btn){
   const buttons=[...document.querySelectorAll(".choice")];
   buttons.forEach(b=>b.disabled=true);
   buttons[item.c].classList.add("correct");
-  if(i===item.c){
+  const isCorrect=i===item.c;
+  if(isCorrect){
     correct++;
+    points+=item.lv;
   }else{
     btn.classList.add("wrong");
   }
-  $("scoreText").textContent=`${Math.round(correct/questions.length*100)}点`;
-  $("feedback").innerHTML=`<b>${i===item.c?"✅ 正解！":"❌ ざんねん！"}</b>${escapeHtml(item.e)}`;
+  $("scoreText").textContent=`${points}pt / ${MAX_POINTS}pt`;
+  updateLiveHud(true);
+  const reaction=systemReaction(item,i,isCorrect);
+  $("systemBox").className=`systemBox ${isCorrect?"good":"bad"}`;
+  $("systemText").textContent=reaction;
+  $("feedback").innerHTML=`<b>${isCorrect?"✅ 正解！":"❌ ざんねん！"} +${isCorrect?item.lv:0}pt</b>${escapeHtml(item.e)}`;
   $("feedback").classList.remove("hidden");
   $("nextRow").classList.remove("hidden");
   $("nextBtn").textContent = index===questions.length-1 ? "結果を見る" : "次の問題へ";
   $("stopBtn").classList.toggle("hidden", answered<5);
+  maybeShowMilestone();
 }
 function nextQuestion(){
   if(!selected)return;
@@ -448,34 +565,27 @@ function confirmStop(){
 function finish(finished){
   clearInterval(timerId);
   const t=elapsed();
-  const score = finished ? Math.round((correct/questions.length)*100) : Math.round((correct/answered)*100);
-  const rank=rankByCorrect(correct,answered,finished);
+  const rank=rankByPoints(points);
 
   $("quizScreen").classList.add("hidden");
   $("resultScreen").classList.remove("hidden");
-  $("resultType").textContent=finished?"正式認定":"暫定認定";
+  $("resultType").textContent=finished?"正式認定":"途中認定";
   $("resultRank").textContent=rank;
   $("resultSubtitle").textContent=rankSubtitles[rank]||"";
-  $("resultScore").textContent=finished?`${score}点 / 100点`:`正解率 ${score}%`;
+  $("resultScore").textContent=`${points}pt / ${MAX_POINTS}pt`;
   $("resultNote").textContent=finished
-    ?"全50問完走！ランキング登録対象です。"
-    :`${answered}問時点での暫定判定です。ランキングには登録されません。`;
+    ?`全50問完走！ ${correct}/50問正解。`
+    :`${answered}/50問で終了。${correct}問正解の時点で認定しました。`;
   $("statCorrect").textContent=correct;
-  $("statAnswered").textContent=answered;
+  $("statAnswered").textContent=`${answered}/50`;
   $("statTime").textContent=formatTime(t);
 
-  if(finished){
-    const rows=loadRanking();
-    rows.push({name:player,score,rank,time:t,ts:Date.now()});
-    saveRanking(rows);
-    $("rankingPanel").classList.remove("hidden");
-  }else{
-    $("rankingPanel").classList.add("hidden");
-  }
+  const rows=loadRanking();
+  rows.push({name:player,score:points,rank,time:t,answered,correct,finished,ts:Date.now()});
+  saveRanking(rows);
+  $("rankingPanel").classList.remove("hidden");
 
-  const share = finished
-    ? `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${rank}｜${rankSubtitles[rank]||""}\n💯 ${score}点 / 100点\n⏱ ${formatTime(t)}\n#しゅり検定`
-    : `🐰 第1回しゅり検定\n${player} の途中結果\n🎓 暫定 ${rank}｜${rankSubtitles[rank]||""}\n✅ ${correct}/${answered}問正解\n#しゅり検定`;
+  const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${rankSubtitles[rank]||""}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n⏱ ${formatTime(t)}\n#しゅり検定`;
   $("shareText").textContent=share;
   renderRanking("resultRanking");
   window.scrollTo({top:0,behavior:"smooth"});
@@ -501,14 +611,20 @@ $("nextBtn").onclick=nextQuestion;
 $("stopBtn").onclick=confirmStop;
 $("retryBtn").onclick=retry;
 $("copyBtn").onclick=copyResult;
-$("clearRankingBtn").onclick=()=>{
-  if(confirm("この端末のランキング記録を消しますか？")){
-    localStorage.removeItem("shuriKenteiRanking");
-    renderRanking("startRanking");
-  }
-};
+
+$("eventCloseBtn").onclick=()=>$("eventOverlay").classList.add("hidden");
 $("playerName").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz()});
 renderRanking("startRanking");
 </script>
+
+<div id="eventOverlay" class="eventOverlay hidden">
+  <div class="eventCard">
+    <div id="eventKicker" class="eventKicker">SYSTEM</div>
+    <div id="eventTitle" class="eventTitle">通知</div>
+    <div id="eventBody" class="eventBody"></div>
+    <button id="eventCloseBtn" class="primary">つづける</button>
+  </div>
+</div>
+<div id="rankUpToast" class="rankUpToast">昇級！</div>
 </body>
 </html>
