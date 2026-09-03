@@ -209,6 +209,7 @@
       <div class="resultHero">
         <div class="resultType" id="resultType"></div>
         <div class="rank" id="resultRank"></div>
+        <div id="resultSubtitle" style="font-size:16px;font-weight:900;color:var(--accent2);margin-top:-2px"></div>
         <div class="score" id="resultScore"></div>
         <div class="note" id="resultNote"></div>
       </div>
@@ -240,6 +241,7 @@
 
 <script>
 const questions = [
+  {lv:1,q:"「がんばれ‼️頑張れ‼️がんばれ‼️頑張れ‼️がんばれ‼️頑張れ‼️がんばれ‼️頑張れ‼️がんばれ‼️頑張れ‼️がんばれ‼️頑張れ‼️がんばれ‼️頑張れ‼️」の「がんばれ／頑張れ」は全部で何回？",a:["12回","13回","14回","15回"],c:2,e:"14回。数えた人えらい。"},
   {lv:1,q:"「しゅりりりりりり」の「り」は全部で何個？",a:["4個", "5個", "6個", "7個"],c:2,e:"正解は6個。"},
   {lv:1,q:"しゅりの好きな食べ物は？",a:["チョコレート", "プリン", "ラーメン", "いちご"],c:0,e:"好きな食べ物はチョコレート。"},
   {lv:1,q:"しゅりの好きなアニメは？",a:["カードキャプターさくら", "おジャ魔女どれみ", "セーラームーン", "プリキュア"],c:1,e:"好きなアニメは「おジャ魔女どれみ」。"},
@@ -257,7 +259,6 @@ const questions = [
   {lv:2,q:"しゅりはどんな印象だと言われることが多い？",a:["クールで静か", "明るくて元気", "無口でミステリアス", "おっとりしている"],c:1,e:"「明るくて元気」が定番。"},
   {lv:2,q:"枠終わりのセリフは？",a:["あっぷっぷ", "またぴょん", "HP満タン！", "おつしゅり"],c:0,e:"枠終わりは「あっぷっぷ」。"},
   {lv:2,q:"しゅりのHP回復のための掛け声は？",a:["ぱっぱらぱっぱっぱー‼️", "ぴろりろりーん‼️", "えいえいおー‼️", "ぽよぽよぽーん‼️"],c:0,e:"HP回復の掛け声は「ぱっぱらぱっぱっぱー‼️」。"},
-  {lv:2,q:"しゅりの配信では基本HPがいくつ回復する？",a:["＋1", "＋5", "＋10", "＋100"],c:0,e:"基本はHP＋1。"},
   {lv:2,q:"しゅりが自分のアバターのアイデンティティだと思っているのは？",a:["うさ耳とぐるぐる目", "猫耳と八重歯", "ツインテールと星目", "眼鏡と赤いリボン"],c:0,e:"アイデンティティは「うさ耳とぐるぐる目」。"},
   {lv:2,q:"しゅりが使っているiPhoneの組み合わせは？",a:["配信用13・本端末16", "配信用14・本端末16", "配信用13・本端末15", "配信用12・本端末16"],c:0,e:"配信用はiPhone 13、本端末はiPhone 16。"},
   {lv:2,q:"しゅりのオリジナルソングの名前は？",a:["君と始める応援歌", "今日もHP＋1", "しゅりなー行進曲", "回復のうた"],c:0,e:"オリジナルソングは「君と始める応援歌」。"},
@@ -312,6 +313,28 @@ const rankByCorrect = (correct, answered, finished) => {
   if (pct < 99) return "六段";
   if (pct < 100) return "七段";
   return "師範";
+};
+
+
+const rankSubtitles = {
+  "10級":"しゅり観測開始",
+  "9級":"ちょっと見たことある",
+  "8級":"しゅりの気配を感知",
+  "7級":"HP回復見習い",
+  "6級":"しゅりなー候補生",
+  "5級":"だいぶ分かってきた",
+  "4級":"しゅり生態把握中",
+  "3級":"しゅりなー認定",
+  "2級":"かなり詳しい",
+  "1級":"古参のにおい",
+  "初段":"しゅり履修済み",
+  "二段":"しゅり史研究員",
+  "三段":"エピソード記憶班",
+  "四段":"古参領域突入",
+  "五段":"しゅりデータベース",
+  "六段":"だいたい何でも知ってる",
+  "七段":"本人より覚えてる疑惑",
+  "師範":"しゅり本人ですか？"
 };
 
 const lvNames = {
@@ -432,6 +455,7 @@ function finish(finished){
   $("resultScreen").classList.remove("hidden");
   $("resultType").textContent=finished?"正式認定":"暫定認定";
   $("resultRank").textContent=rank;
+  $("resultSubtitle").textContent=rankSubtitles[rank]||"";
   $("resultScore").textContent=finished?`${score}点 / 100点`:`正解率 ${score}%`;
   $("resultNote").textContent=finished
     ?"全50問完走！ランキング登録対象です。"
@@ -450,8 +474,8 @@ function finish(finished){
   }
 
   const share = finished
-    ? `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${rank}\n💯 ${score}点 / 100点\n⏱ ${formatTime(t)}\n#しゅり検定`
-    : `🐰 第1回しゅり検定\n${player} の途中結果\n🎓 暫定 ${rank}\n✅ ${correct}/${answered}問正解\n#しゅり検定`;
+    ? `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${rank}｜${rankSubtitles[rank]||""}\n💯 ${score}点 / 100点\n⏱ ${formatTime(t)}\n#しゅり検定`
+    : `🐰 第1回しゅり検定\n${player} の途中結果\n🎓 暫定 ${rank}｜${rankSubtitles[rank]||""}\n✅ ${correct}/${answered}問正解\n#しゅり検定`;
   $("shareText").textContent=share;
   renderRanking("resultRanking");
   window.scrollTo({top:0,behavior:"smooth"});
