@@ -160,9 +160,90 @@
     .rankrow{grid-template-columns:34px 1fr 62px 58px}
     .grid2{grid-template-columns:1fr}
   }
+
+  /* Rabbit nuisance layer: visual only, never blocks taps */
+  #rabbitLayer{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  #rabbitActor{
+    position:absolute;
+    left:-120px;
+    top:18%;
+    font-size:72px;
+    line-height:1;
+    filter:drop-shadow(0 8px 14px rgba(70,40,70,.18));
+    transform-origin:center;
+    opacity:0;
+    user-select:none;
+  }
+  #rabbitBubble{
+    position:absolute;
+    max-width:190px;
+    padding:9px 11px;
+    border-radius:14px;
+    background:#fff;
+    border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(99,62,88,.12);
+    font-size:12px;
+    font-weight:900;
+    color:var(--ink);
+    opacity:0;
+  }
+  @keyframes rabbitPeekLeft{
+    0%{left:-110px;opacity:0;transform:rotate(-8deg)}
+    18%{left:-18px;opacity:1;transform:rotate(0)}
+    72%{left:-18px;opacity:1}
+    100%{left:-110px;opacity:0;transform:rotate(-8deg)}
+  }
+  @keyframes rabbitPeekRight{
+    0%{right:-110px;left:auto;opacity:0;transform:rotate(8deg)}
+    18%{right:-18px;left:auto;opacity:1;transform:rotate(0)}
+    72%{right:-18px;left:auto;opacity:1}
+    100%{right:-110px;left:auto;opacity:0;transform:rotate(8deg)}
+  }
+  @keyframes rabbitCross{
+    0%{left:-120px;opacity:0;transform:translateY(0) rotate(-8deg)}
+    8%{opacity:1}
+    48%{transform:translateY(-12px) rotate(5deg)}
+    92%{opacity:1}
+    100%{left:calc(100vw + 40px);opacity:0;transform:translateY(0) rotate(10deg)}
+  }
+  @keyframes rabbitBounce{
+    0%,100%{transform:translateY(0) scale(1)}
+    35%{transform:translateY(-28px) scale(1.08)}
+    65%{transform:translateY(0) scale(.96)}
+  }
+  @keyframes rabbitSleep{
+    0%{opacity:0;transform:translateY(20px) rotate(0)}
+    20%{opacity:1}
+    50%{transform:translateY(0) rotate(8deg)}
+    80%{opacity:1}
+    100%{opacity:0;transform:translateY(12px) rotate(12deg)}
+  }
+  @keyframes rabbitFinal{
+    0%{opacity:0;left:50%;top:45%;transform:translate(-50%,-50%) scale(.4)}
+    35%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}
+    70%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(.8)}
+  }
+  .rabbit-peek-left{animation:rabbitPeekLeft 2.2s ease both}
+  .rabbit-peek-right{animation:rabbitPeekRight 2.2s ease both}
+  .rabbit-cross{animation:rabbitCross 3.1s linear both}
+  .rabbit-bounce{animation:rabbitBounce .6s ease 3 both}
+  .rabbit-sleep{animation:rabbitSleep 3s ease both}
+  .rabbit-final{animation:rabbitFinal 2.4s ease both}
+
 </style>
 </head>
 <body>
+<div id="rabbitLayer" aria-hidden="true">
+  <div id="rabbitActor">🐰</div>
+  <div id="rabbitBubble"></div>
+</div>
 <div class="wrap">
 
   <section id="startScreen">
@@ -186,6 +267,7 @@
       <input id="playerName" type="text" maxlength="16" placeholder="例：しゅりなー太郎" />
       <div style="height:12px"></div>
       <button class="primary" id="startBtn">検定をはじめる ✨</button>
+      <div class="footerNote">🐰 うさぎの動きは正解と無関係です。ヒントにはなりません。</div>
       <div class="footerNote">
         ※この試作版のランキングは、この端末・このブラウザ内だけに保存されます。
         みんな共通ランキングは、あとでデータベース連携版にできます。
@@ -514,6 +596,90 @@ function renderRanking(targetId){
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
 }
+
+let correctStreak=0;
+let wrongStreak=0;
+let rabbitBusy=false;
+
+function resetRabbitActor(){
+  const r=$("rabbitActor");
+  const b=$("rabbitBubble");
+  r.className="";
+  r.removeAttribute("style");
+  r.textContent="🐰";
+  b.style.opacity=0;
+  b.textContent="";
+  rabbitBusy=false;
+}
+
+function showRabbit(kind="peek", text="", face="🐰"){
+  if(rabbitBusy) return;
+  rabbitBusy=true;
+  const r=$("rabbitActor");
+  const b=$("rabbitBubble");
+  r.className="";
+  r.removeAttribute("style");
+  r.textContent=face;
+  b.style.opacity=0;
+  b.textContent=text||"";
+
+  const top = 14 + Math.floor(Math.random()*62);
+  r.style.top=top+"%";
+
+  if(kind==="peek"){
+    if(Math.random()<.5){
+      r.classList.add("rabbit-peek-left");
+      b.style.left="58px"; b.style.top=`calc(${top}% + 8px)`;
+    }else{
+      r.style.left="auto";
+      r.style.right="-110px";
+      r.classList.add("rabbit-peek-right");
+      b.style.right="58px"; b.style.top=`calc(${top}% + 8px)`;
+    }
+  }else if(kind==="cross"){
+    r.style.top=(20+Math.floor(Math.random()*55))+"%";
+    r.classList.add("rabbit-cross");
+    b.style.left="50%"; b.style.top="18%"; b.style.transform="translateX(-50%)";
+  }else if(kind==="bounce"){
+    r.style.left="50%"; r.style.top="72%"; r.style.opacity=1; r.style.transform="translateX(-50%)";
+    r.classList.add("rabbit-bounce");
+    b.style.left="50%"; b.style.top="64%"; b.style.transform="translateX(-50%)";
+  }else if(kind==="sleep"){
+    r.style.left="76%"; r.style.top="72%";
+    r.classList.add("rabbit-sleep");
+    b.style.left="55%"; b.style.top="65%";
+  }else if(kind==="final"){
+    r.classList.add("rabbit-final");
+    b.style.left="50%"; b.style.top="58%"; b.style.transform="translateX(-50%)";
+  }
+
+  if(text){
+    setTimeout(()=>{ b.style.opacity=1; },180);
+  }
+  setTimeout(resetRabbitActor, kind==="cross"?3200:kind==="final"?2500:kind==="sleep"?3100:2300);
+}
+
+function maybeRabbitOnQuestion(){
+  const qno=index+1;
+  // Fixed fun beats + a little randomness. Never linked to correct answer.
+  if(qno===10) return showRabbit("peek","まだ序盤。","🐰");
+  if(qno===25) return showRabbit("sleep","まだやる？","🐰");
+  if(qno===40) return showRabbit("peek","古参領域きた。","🐰");
+  if(qno===50) return showRabbit("final","FINAL。","🐰");
+  if(Math.random()<0.12) showRabbit(Math.random()<.5?"peek":"cross","", "🐰");
+}
+
+function rabbitAfterAnswer(isCorrect, lv){
+  if(isCorrect){
+    correctStreak++; wrongStreak=0;
+    if(correctStreak===5) showRabbit("bounce","5連続！","🐰");
+    else if(lv>=4 && Math.random()<0.45) showRabbit("peek","そこ知ってるんだ。","🐰");
+  }else{
+    wrongStreak++; correctStreak=0;
+    if(wrongStreak===3) showRabbit("peek","いっしょに悩む？","🐰");
+  }
+}
+
 function startQuiz(){
   player=$("playerName").value.trim()||"ななしゅりなー";
   index=0;correct=0;answered=0;selected=false;points=0;lastRank="10級";startedAt=Date.now();
@@ -548,6 +714,7 @@ function renderQuestion(){
     b.onclick=()=>choose(i,b);
     choices.appendChild(b);
   });
+  setTimeout(maybeRabbitOnQuestion,220);
 }
 function choose(i,btn){
   if(selected)return;
@@ -571,6 +738,7 @@ function choose(i,btn){
   $("systemText").textContent=reaction;
   $("feedback").innerHTML=`<b>${isCorrect?"✅ 正解！":"❌ ざんねん！"} +${isCorrect?item.lv:0}pt</b>${escapeHtml(item.e)}`;
   $("feedback").classList.remove("hidden");
+  rabbitAfterAnswer(i===item.c, item.lv);
   $("nextRow").classList.remove("hidden");
   $("nextBtn").textContent = index===questions.length-1 ? "結果を見る" : "次の問題へ";
   $("stopBtn").classList.toggle("hidden", answered<5);
