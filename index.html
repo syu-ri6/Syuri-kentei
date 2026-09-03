@@ -145,8 +145,8 @@
   .systemBox.bad{border-color:#f1b3bf;background:#fff6f7}
   .systemBox.event{border-color:#ffd86f;background:linear-gradient(135deg,#fffaf0,#fff)}
   .systemText{font-size:14px;line-height:1.6;font-weight:750}
-  .eventOverlay{position:fixed;inset:0;background:rgba(35,25,38,.62);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}
-  .eventCard{width:min(560px,100%);background:#fff;border-radius:24px;padding:22px;border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.22);text-align:center}
+  .eventOverlay{position:fixed;pointer-events:auto;inset:0;background:rgba(35,25,38,.62);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}
+  .eventCard{width:min(560px,100%);pointer-events:auto;background:#fff;border-radius:24px;padding:22px;border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.22);text-align:center}
   .eventKicker{font-size:11px;letter-spacing:.16em;font-weight:1000;color:var(--accent2)}
   .eventTitle{font-size:25px;font-weight:1000;margin:8px 0}
   .eventBody{font-size:14px;line-height:1.7;color:var(--muted);white-space:pre-line;margin-bottom:16px}
@@ -383,44 +383,67 @@ let points=0, lastRank="10級";
 const $ = id => document.getElementById(id);
 
 const milestoneEvents = {
-  10:{kicker:"SYSTEM CHECK",title:"基礎情報の照合完了",body:"ここまではウォーミングアップ。\nまだ帰れます。"},
-  25:{kicker:"MISSION",title:"しゅり生態調査を継続せよ",body:"ここから先、知識ではなく記憶が要求されます。\n健闘を祈ります。"},
+  10:{kicker:"SYSTEM CHECK",title:"基礎情報の照合完了",body:"基礎エリア終了。\nここから少しだけ記憶力を使います。"},
+  25:{kicker:"MISSION",title:"しゅり生態調査を継続せよ",body:"中盤到達。\nここから「それ覚えてる？」が増えていきます。"},
   40:{kicker:"WARNING",title:"古参領域に入りました",body:"ここから『知らん』が正常です。\n知っていた場合、かなり見ています。"},
   48:{kicker:"SYSTEM",title:"師範候補を確認",body:"残りわずか。\n本当にそこまで覚えている必要はありましたか？"}
 };
-const specialReactions = {
-  0:{2:"14回。数えた人えらい。",0:"惜しい。応援が2回ほど足りません。",1:"あと1がんばれ。",3:"1がんばれ多いです。"},
-  1:{2:"正解。りの在庫は十分です。"},
-  11:{1:"日付変更ではなく、バトンタッチ‼️です。担当者でもいる？"},
-  16:{0:"正解。ぱっぱらぱっぱっぱー‼️ HP回復処理を実行しました。"},
-  24:{1:"正解。見た目はうさぎ、判定はリス。"},
-  27:{0:"一般ゲーム知識を検出。ここはしゅり枠です。",1:"正解。HP＝ハッピーポイント。一般常識との戦いに勝ちました。"},
-  28:{3:"正解。なお、プレゼント用ではありません。自分用2kgです。",0:"常識的な量を選択しました。残念ながら相手はしゅりです。",1:"まだ常識の範囲です。",2:"かなり近づきましたが、もう500gあります。"},
-  36:{1:"正解。段差に到達する前に転倒しました。先取りがすごい。"},
-  38:{2:"正解。ワールドクラス。まだ地球にはいます。",3:"宇宙までは行っていません。話を盛りすぎです。"},
-  39:{1:"正解。凝りすぎて全身ダイヤモンド判定。"},
-  48:{0:"正解。Rank5まで履修済み。かなり見ています。",1:"それっぽい。ちゃんと引っかけです。",2:"こちらも引っかけ。惜しい。"},
-  49:{2:"正解。あと3個。ここまで覚えてるの、だいぶ古参です。"}
+const questionReactions = {
+  0:{ok:"14回。数えた人えらい。",ng:"数が違います。もう一度、がんばれを追跡してください。"},
+  1:{ok:"正解。り、ちゃんと6個あります。",ng:"りの数が迷子です。名前をもう一度見てみよう。"},
+  2:{ok:"正解。チョコレートはかなり強い。",ng:"違います。しゅりの甘党データと一致しません。"},
+  3:{ok:"正解。おジャ魔女どれみ。",ng:"違います。好きアニメ判定から外れました。"},
+  4:{ok:"正解。鹿児島です。",ng:"違います。実家の位置情報がずれています。"},
+  5:{ok:"正解。ダンス講師。",ng:"違います。職業データとの照合に失敗しました。"},
+  6:{ok:"正解。REALITYで配信しています。",ng:"違います。配信アプリが別世界です。"},
+  7:{ok:"正解。毎日のおはよう投稿。",ng:"違います。朝の定例投稿を見失っています。"},
+  8:{ok:"正解。初見🙆‍♀️回復❤️‍🩹雑談🗣️。",ng:"違います。タイトルの固定メンバーが足りません。"},
+  9:{ok:"正解。しゅりなー。",ng:"違います。住民票のファンネーム欄が不一致です。"},
+  10:{ok:"正解。💪🏻🐰です。",ng:"違います。筋肉とうさぎのセットを確認してください。"},
+  11:{ok:"正解。効果音とギフト芸。",ng:"違います。しゅり枠の騒がしさが足りません。"},
+  12:{ok:"正解。24時はバトンタッチ‼️",ng:"違います。日付変更の引き継ぎに失敗しました。"},
+  13:{ok:"正解。コナンくん。",ng:"違います。名探偵の声データではありません。"},
+  14:{ok:"正解。早口で滑舌がいい。",ng:"違います。速度と聞き取りやすさの両立がポイントです。"},
+  15:{ok:"正解。明るくて元気。",ng:"違います。第一印象のエネルギー値が低すぎます。"},
+  16:{ok:"正解。枠終わりは「あっぷっぷ」。",ng:"違います。終了コマンドが認識されませんでした。"},
+  17:{ok:"正解。ぱっぱらぱっぱっぱー‼️",ng:"違います。HP回復用の呪文ではありません。"},
+  18:{ok:"正解。うさ耳とぐるぐる目。",ng:"違います。アバターの核パーツが足りません。"},
+  19:{ok:"正解。配信13、本端末16。",ng:"違います。端末の役割分担が逆かもしれません。"},
+  20:{ok:"正解。「君と始める応援歌」。",ng:"違います。オリジナルソング名との一致なし。"},
+  21:{ok:"正解。「青と夏」。",ng:"違います。踊ってみた履歴にありません。"},
+  22:{ok:"正解。Duolingo。",ng:"違います。韓国語学習アプリが別です。"},
+  23:{ok:"正解。タリーズの缶コーヒー。",ng:"違います。いつもの缶が見つかりません。"},
+  24:{ok:"正解。リス。",ng:"違います。うさ耳に引っぱられましたか？"},
+  25:{ok:"正解。深い理由はなく、ノリとリズム。",ng:"違います。名前の由来を壮大にしすぎています。"},
+  26:{ok:"正解。Instagramもいます。",ng:"違います。ひっそりいるInstagramを忘れています。"},
+  27:{ok:"正解。ハッピーポイント。",ng:"違います。ゲームのHPではなく、しゅり枠のHPです。"},
+  28:{ok:"正解。自分用に2kg。",ng:"違います。まだ量が常識側にいます。"},
+  29:{ok:"正解。くまのぬいぐるみ。",ng:"違います。長年の相棒が別の動物になっています。"},
+  30:{ok:"正解。屋根裏はアライグマ。",ng:"違います。屋根裏の住人が別種です。"},
+  31:{ok:"正解。衝撃は獣臭。",ng:"違います。視覚より先に鼻へ来ました。"},
+  32:{ok:"正解。餌やり相手はリスザル。",ng:"違います。旅行先の餌やり相手が違います。"},
+  33:{ok:"正解。袖に黄色っぽい茶色っぽい液体。",ng:"違います。もっと嫌な答えです。"},
+  34:{ok:"正解。他の人のお祝いを見て泣きました。",ng:"違います。本人に悲しい事件は起きていません。"},
+  35:{ok:"正解。本人は何も祝われていません。",ng:"違います。主役ではありません。ただの宿泊者です。"},
+  36:{ok:"正解。段差の前に何もない所で転びました。",ng:"違います。注意された段差まで到達していません。"},
+  37:{ok:"正解。見ていたのは星。",ng:"違います。足元より空を優先していました。"},
+  38:{ok:"正解。ワールドクラス。",ng:"違います。肩の規模感が合っていません。"},
+  39:{ok:"正解。ダイヤモンド。",ng:"違います。凝りの硬度が足りません。"},
+  40:{ok:"正解。あざっしゅりんりん。",ng:"違います。ギフト芸以前の古代語ではありません。"},
+  41:{ok:"正解。初イベントはTikTok広告イベント。",ng:"違います。初陣のイベントが別です。"},
+  42:{ok:"正解。初イベントは2位。",ng:"違います。初イベントの順位がずれています。"},
+  43:{ok:"正解。オリギフ1回目は1位。",ng:"違います。1回目と2回目を混ぜていませんか？"},
+  44:{ok:"正解。オリギフ2回目は2位。",ng:"違います。今回は2回目の順位です。"},
+  45:{ok:"正解。恋愛シミュレーションゲーム。",ng:"違います。イベント会場のゲームジャンルが違います。"},
+  46:{ok:"正解。歌って踊れるアイドル。",ng:"違います。幼少期の最終目標が違います。"},
+  47:{ok:"正解。AirPodsが職場LINEを読み上げました。",ng:"違います。くまちゃん時間への侵入者はもっと現代的です。"},
+  48:{ok:"正解。Rank5はツーショットイラスト。",ng:"違います。そこ、引っかけ特典です。"},
+  49:{ok:"正解。あと3個。",ng:"違います。ここは古参記憶テストです。"}
 };
 function systemReaction(item, choiceIndex, isCorrect){
-  const special=specialReactions[index]?.[choiceIndex];
-  if(special) return special;
-  const correctPool=[
-    "正解。しゅりデータの照合に成功しました。",
-    "正解。ちゃんと見ています。",
-    "正解。記憶領域にしゅり情報を確認。",
-    "正解。SYSTEM、ちょっと引いています。",
-    "正解。そこ知ってるんだ。"
-  ];
-  const wrongPool=[
-    "不正解。しゅりデータとの不一致を検出。",
-    "違います。まあ普通は知らなくても生きていけます。",
-    "不正解。今ここで覚えたので実質プラスです。",
-    "違います。選択の気持ちは分からなくもない。",
-    "不正解。SYSTEMは静かに記録しました。"
-  ];
-  const pool=isCorrect?correctPool:wrongPool;
-  return pool[(index+choiceIndex)%pool.length];
+  const r=questionReactions[index];
+  if(!r) return isCorrect ? "正解。" : "不正解。";
+  return isCorrect ? r.ok : r.ng;
 }
 function updateLiveHud(showToast=true){
   const rank=rankByPoints(points);
@@ -499,8 +522,8 @@ function startQuiz(){
   $("quizScreen").classList.remove("hidden");
   timerId=setInterval(updateTimer,1000); updateTimer();
   updateLiveHud(false);
-  $("systemBox").className="systemBox";
-  $("systemText").textContent="受験者を確認。まだ何も疑っていません。";
+  $("systemBox").className="systemBox hidden";
+  $("systemText").textContent="";
   renderQuestion();
 }
 function renderQuestion(){
@@ -513,6 +536,8 @@ function renderQuestion(){
   $("questionText").textContent=`Q${index+1}. ${item.q}`;
   $("feedback").classList.add("hidden");
   $("nextRow").classList.add("hidden");
+  $("systemBox").className="systemBox hidden";
+  $("systemText").textContent="";
   $("stopBtn").classList.toggle("hidden", answered<5);
   const choices=$("choices");
   choices.innerHTML="";
@@ -542,6 +567,7 @@ function choose(i,btn){
   updateLiveHud(true);
   const reaction=systemReaction(item,i,isCorrect);
   $("systemBox").className=`systemBox ${isCorrect?"good":"bad"}`;
+  $("systemBox").classList.remove("hidden");
   $("systemText").textContent=reaction;
   $("feedback").innerHTML=`<b>${isCorrect?"✅ 正解！":"❌ ざんねん！"} +${isCorrect?item.lv:0}pt</b>${escapeHtml(item.e)}`;
   $("feedback").classList.remove("hidden");
@@ -612,7 +638,12 @@ $("stopBtn").onclick=confirmStop;
 $("retryBtn").onclick=retry;
 $("copyBtn").onclick=copyResult;
 
-$("eventCloseBtn").onclick=()=>$("eventOverlay").classList.add("hidden");
+document.addEventListener("click",(e)=>{
+  if(e.target && e.target.id==="eventCloseBtn"){
+    e.preventDefault();
+    $("eventOverlay").classList.add("hidden");
+  }
+});
 $("playerName").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz()});
 renderRanking("startRanking");
 </script>
@@ -622,7 +653,7 @@ renderRanking("startRanking");
     <div id="eventKicker" class="eventKicker">SYSTEM</div>
     <div id="eventTitle" class="eventTitle">通知</div>
     <div id="eventBody" class="eventBody"></div>
-    <button id="eventCloseBtn" class="primary">つづける</button>
+    <button id="eventCloseBtn" type="button" class="primary">つづける</button>
   </div>
 </div>
 <div id="rankUpToast" class="rankUpToast">昇級！</div>
