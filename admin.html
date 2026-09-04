@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>しゅり検定｜ランキング管理</title>
+<style>
+:root{
+  --bg:#fff8fb;--card:#fff;--ink:#3e3340;--muted:#8d7d89;
+  --line:#eadfe7;--pink:#f48fb1;--danger:#d9485f;--danger2:#b92e45;
+  --shadow:0 12px 32px rgba(99,62,88,.10);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:
+  radial-gradient(circle at 12% 8%,#ffe6f0 0 9%,transparent 10%),
+  radial-gradient(circle at 92% 18%,#fff0c9 0 7%,transparent 8%),
+  var(--bg);
+  color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+}
+.wrap{max-width:620px;margin:auto;padding:24px 16px 48px}
+.hero{padding:10px 4px 18px}
+.kicker{font-size:11px;font-weight:900;letter-spacing:.16em;color:var(--pink)}
+h1{font-size:28px;line-height:1.2;margin:7px 0 8px}
+.sub{font-size:13px;line-height:1.7;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
+.stat{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.stat strong{font-size:30px}
+.badge{font-size:11px;font-weight:900;padding:7px 10px;border-radius:999px;background:#f7f3f6;color:#756873}
+label{display:block;font-size:12px;font-weight:900;margin:12px 0 7px}
+input{
+  width:100%;border:1px solid var(--line);background:#fff;border-radius:14px;
+  padding:13px 14px;font-size:16px;outline:none
+}
+input:focus{border-color:#d9a3b8;box-shadow:0 0 0 4px rgba(244,143,177,.12)}
+button{
+  width:100%;border:0;border-radius:15px;padding:14px 16px;font-size:15px;
+  font-weight:900;cursor:pointer
+}
+button:disabled{opacity:.5;cursor:not-allowed}
+.refresh{background:#f3edf1;color:#665a63;margin-top:10px}
+.danger{background:var(--danger);color:#fff;margin-top:12px}
+.danger:active{background:var(--danger2)}
+.note{font-size:11px;line-height:1.65;color:var(--muted);margin-top:10px}
+.warning{background:#fff5f6;border:1px solid #ffd4da;border-radius:14px;padding:12px;font-size:12px;line-height:1.65;color:#8c3342}
+.ranklist{margin-top:12px;border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:44px 1fr auto;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px;align-items:center}
+.name{font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.score{font-weight:900;text-align:right}
+.status{margin-top:12px;padding:11px 12px;border-radius:12px;font-size:12px;font-weight:800;display:none}
+.status.show{display:block}
+.status.ok{background:#eefaf2;color:#327549}
+.status.ng{background:#fff0f2;color:#9c3548}
+.modal{
+  position:fixed;inset:0;background:rgba(40,30,38,.46);display:none;
+  align-items:center;justify-content:center;padding:18px;z-index:20
+}
+.modal.show{display:flex}
+.modalCard{width:min(100%,460px);background:#fff;border-radius:22px;padding:20px;box-shadow:0 20px 60px rgba(40,20,34,.22)}
+.modalTitle{font-size:20px;font-weight:1000;margin-bottom:8px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cancel{background:#f2edf0;color:#655b62}
+.confirm{background:var(--danger);color:#fff}
+.small{font-size:11px;color:var(--muted);line-height:1.65}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="kicker">PRIVATE ADMIN</div>
+    <h1>🐰 しゅり検定<br>ランキング管理</h1>
+    <div class="sub">このページは公開側からリンクしない管理用ページ。ランキングの確認と全件リセットだけできます。</div>
+  </div>
+
+  <div class="card">
+    <div class="stat">
+      <div>
+        <div class="kicker">CURRENT ENTRIES</div>
+        <strong id="count">…</strong>
+      </div>
+      <div class="badge">みんな共通</div>
+    </div>
+    <button class="refresh" id="refreshBtn">↻ 最新のランキングを確認</button>
+    <div id="ranklist" class="ranklist"></div>
+  </div>
+
+  <div class="card">
+    <div class="warning">
+      ⚠️ 「全件リセット」は現在のランキングを全部消します。<br>
+      検定の問題やサイト本体は消えません。
+    </div>
+
+    <label for="adminCode">管理コード</label>
+    <input id="adminCode" type="password" autocomplete="off" placeholder="管理コードを入力">
+
+    <button class="danger" id="resetBtn">ランキングを全件リセット</button>
+    <div class="note">管理コードはこのHTML内には入っていません。入力した時だけSupabase側で照合します。</div>
+    <div id="status" class="status"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="modalCard">
+    <div class="modalTitle">本当に全部消す？</div>
+    <div class="small">取り消しできません。確認のため下に <b>リセット</b> と入力してください。</div>
+    <label for="confirmWord">確認入力</label>
+    <input id="confirmWord" type="text" autocomplete="off" placeholder="リセット">
+    <div class="actions">
+      <button class="cancel" id="cancelBtn">やめる</button>
+      <button class="confirm" id="confirmBtn">全部消す</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://pphtlzinruwdkddhjuwu.supabase.co';
+const SUPABASE_KEY='sb_publishable_JCK0fpCAOFujdc727w7eSA_mTs2f-O9';
+const $=id=>document.getElementById(id);
+
+function headers(extra={}){
+  return {"apikey":SUPABASE_KEY,"Content-Type":"application/json",...extra};
+}
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+function showStatus(msg,ok=false){
+  const el=$("status");
+  el.textContent=msg;
+  el.className="status show "+(ok?"ok":"ng");
+}
+async function loadRanking(){
+  $("refreshBtn").disabled=true;
+  try{
+    const params=new URLSearchParams({
+      select:"name,score,answered,time_sec,rank,created_at",
+      order:"score.desc,answered.desc,time_sec.asc,created_at.asc",
+      limit:"10"
+    });
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/rankings?${params}`,{
+      headers:headers({"Prefer":"count=exact"})
+    });
+    if(!res.ok) throw new Error("fetch failed");
+    const rows=await res.json();
+    const range=res.headers.get("content-range")||"";
+    const total=range.includes("/")?range.split("/").pop():rows.length;
+    $("count").textContent=total==="*" ? rows.length : total;
+
+    $("ranklist").innerHTML=rows.length ? rows.map((r,i)=>`
+      <div class="row">
+        <div>${i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</div>
+        <div class="name">${escapeHtml(r.name)}<div class="small">${escapeHtml(r.rank)}・${r.answered}/50問</div></div>
+        <div class="score">${r.score}pt</div>
+      </div>
+    `).join("") : '<div class="note">まだランキングは空です。</div>';
+  }catch(e){
+    $("count").textContent="？";
+    $("ranklist").innerHTML='<div class="note">ランキングを読み込めませんでした。</div>';
+  }finally{
+    $("refreshBtn").disabled=false;
+  }
+}
+
+function openConfirm(){
+  if(!$("adminCode").value.trim()){
+    showStatus("管理コードを入れてね🐰");
+    return;
+  }
+  $("confirmWord").value="";
+  $("modal").classList.add("show");
+  setTimeout(()=>$("confirmWord").focus(),100);
+}
+function closeConfirm(){
+  $("modal").classList.remove("show");
+}
+async function resetAll(){
+  if($("confirmWord").value.trim()!=="リセット"){
+    alert("確認欄に「リセット」と入力してね。");
+    return;
+  }
+  const code=$("adminCode").value.trim();
+  $("confirmBtn").disabled=true;
+  $("confirmBtn").textContent="削除中…";
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reset_rankings`,{
+      method:"POST",
+      headers:headers(),
+      body:JSON.stringify({admin_code:code})
+    });
+    if(!res.ok){
+      const txt=await res.text();
+      if(res.status===401 || res.status===403 || /invalid admin code/i.test(txt)){
+        throw new Error("bad_code");
+      }
+      throw new Error("reset_failed");
+    }
+    const deleted=await res.json();
+    closeConfirm();
+    $("adminCode").value="";
+    showStatus(`リセット完了！ ${deleted}件のランキングを削除しました。`,true);
+    await loadRanking();
+  }catch(e){
+    closeConfirm();
+    if(e.message==="bad_code") showStatus("管理コードが違うみたい！削除はされてません。");
+    else showStatus("リセットに失敗しました。通信を確認してもう一度試してね。");
+  }finally{
+    $("confirmBtn").disabled=false;
+    $("confirmBtn").textContent="全部消す";
+  }
+}
+
+$("refreshBtn").addEventListener("click",loadRanking);
+$("resetBtn").addEventListener("click",openConfirm);
+$("cancelBtn").addEventListener("click",closeConfirm);
+$("confirmBtn").addEventListener("click",resetAll);
+$("modal").addEventListener("click",e=>{if(e.target===$("modal"))closeConfirm()});
+loadRanking();
+</script>
+</body>
+</html>
