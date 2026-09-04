@@ -270,6 +270,21 @@
   .eventCard.mission{border:2px solid #cbbdff}
   .eventCard.warning{border:2px solid #ffd36b}
 
+
+.rankingTabs{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 8px}
+.rankingTab{
+  border:1px solid var(--line);background:#fff;color:var(--muted);
+  border-radius:999px;padding:8px 11px;font-size:11px;font-weight:900;
+  cursor:pointer
+}
+.rankingTab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.localBestCard{
+  padding:14px;border:1px solid var(--line);border-radius:15px;
+  background:linear-gradient(135deg,#fff9df,#fff);
+}
+.localBestScore{font-size:24px;font-weight:1000;margin:4px 0}
+.localBestMeta{font-size:12px;color:var(--muted);line-height:1.6}
+
 </style>
 </head>
 <body>
@@ -302,13 +317,19 @@
       <button class="primary" id="startBtn">検定をはじめる ✨</button>
       <div class="footerNote">🐰 うさぎの動きは正解と無関係です。ヒントにはなりません。</div>
       <div class="footerNote">
-        🌐 ランキングはみんな共通です。同じ表示名は1人1回まで登録できます。
+        🌐 BESTランキングは同じ端末の最高記録だけ。全挑戦ランキングには再挑戦もそのまま残ります。
       </div>
     </div>
 
     <div class="panel">
       <div class="rankingTitle">
-        <strong>🏆 みんなのランキング</strong>
+        <strong>🏆 ランキング</strong>
+        <span class="pill">100位まで</span>
+      </div>
+      <div class="rankingTabs" data-ranking-tabs="start">
+        <button class="rankingTab active" data-mode="best">👑 BESTランキング</button>
+        <button class="rankingTab" data-mode="all">🔥 全挑戦</button>
+        <button class="rankingTab" data-mode="device">📱 この端末</button>
       </div>
       <div id="rankingStatus" class="footerNote">ランキング読み込み中…</div>
       <div id="startRanking" class="ranking"></div>
@@ -388,8 +409,13 @@
 
     <div class="panel" id="rankingPanel">
       <div class="rankingTitle">
-        <strong>🏆 みんなのしゅり検定ランキング</strong>
-        <span class="pill">同点は回答数→タイム</span>
+        <strong>🏆 ランキング</strong>
+        <span class="pill">100位まで</span>
+      </div>
+      <div class="rankingTabs" data-ranking-tabs="result">
+        <button class="rankingTab active" data-mode="best">👑 BESTランキング</button>
+        <button class="rankingTab" data-mode="all">🔥 全挑戦</button>
+        <button class="rankingTab" data-mode="device">📱 この端末</button>
       </div>
       <div id="resultRanking" class="ranking"></div>
     </div>
@@ -649,6 +675,35 @@ function sbHeaders(extra={}){
 function normalizeName(s){
   return String(s||"").trim().replace(/\s+/g," ").toLowerCase();
 }
+
+function getPlayerId(){
+  let id=localStorage.getItem("shuriKenteiPlayerId");
+  if(!id){
+    if(window.crypto && crypto.randomUUID) id=crypto.randomUUID();
+    else id="dev-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,12);
+    localStorage.setItem("shuriKenteiPlayerId",id);
+  }
+  return id;
+}
+const DEVICE_PLAYER_ID=getPlayerId();
+
+function loadLocalAttempts(){
+  try{return JSON.parse(localStorage.getItem("shuriKenteiAttempts")||"[]")}catch(e){return []}
+}
+function saveLocalAttempt(row){
+  const rows=loadLocalAttempts();
+  rows.push({...row,ts:Date.now()});
+  rows.sort((a,b)=>b.ts-a.ts);
+  localStorage.setItem("shuriKenteiAttempts",JSON.stringify(rows.slice(0,50)));
+}
+function getLocalBest(){
+  const rows=loadLocalAttempts();
+  if(!rows.length) return null;
+  return [...rows].sort((a,b)=>
+    b.score-a.score || b.answered-a.answered || a.time_sec-b.time_sec || b.ts-a.ts
+  )[0];
+}
+
 async function nameExists(name){
   const params=new URLSearchParams({
     select:"id",
@@ -662,13 +717,14 @@ async function nameExists(name){
   const rows=await res.json();
   return rows.length>0;
 }
-async function fetchRanking(){
+async function fetchRanking(mode="best"){
+  const endpoint = mode==="best" ? "best_rankings" : "rankings";
   const params=new URLSearchParams({
-    select:"name,score,correct,answered,time_sec,rank,type,created_at",
+    select:"name,score,correct,answered,time_sec,rank,type,created_at,player_id",
     order:"score.desc,answered.desc,time_sec.asc,created_at.asc",
-    limit:"20"
+    limit:"100"
   });
-  const res=await fetch(`${SUPABASE_URL}/rest/v1/rankings?${params.toString()}`,{
+  const res=await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}?${params.toString()}`,{
     headers:sbHeaders()
   });
   if(!res.ok) throw new Error("ranking_fetch_failed");
@@ -685,13 +741,35 @@ async function insertRanking(row){
   const duplicate=res.status===409 || /duplicate|rankings_name_unique|23505/i.test(text);
   return {ok:false,duplicate,text};
 }
-async function renderRanking(targetId){
+async function renderRanking(targetId,mode="best"){
   const box=$(targetId);
   if(!box) return;
+
+  if(mode==="device"){
+    const best=getLocalBest();
+    const attempts=loadLocalAttempts();
+    if($("rankingStatus")) $("rankingStatus").textContent="📱 このブラウザに保存された記録";
+    if(!best){
+      box.innerHTML='<div class="note">この端末にはまだ挑戦記録がありません🐰</div>';
+      return;
+    }
+    box.innerHTML=`
+      <div class="localBestCard">
+        <div class="tiny">👑 この端末の自己BEST</div>
+        <div class="localBestScore">${best.score}pt｜${escapeHtml(best.rank)}</div>
+        <div class="localBestMeta">${best.correct}/${best.answered}問正解 ・ ${formatTime(best.time_sec)}<br>挑戦回数：${attempts.length}回</div>
+      </div>`;
+    return;
+  }
+
   box.innerHTML='<div class="note">ランキング読み込み中… 🐰</div>';
   try{
-    const rows=await fetchRanking();
-    if($("rankingStatus")) $("rankingStatus").textContent="🌐 みんな共通ランキング";
+    const rows=await fetchRanking(mode);
+    if($("rankingStatus")){
+      $("rankingStatus").textContent = mode==="best"
+        ? "👑 同じ端末の挑戦は最高記録1件だけ"
+        : "🔥 名前違いも含めて全挑戦をそのまま表示";
+    }
     if(!rows.length){
       box.innerHTML='<div class="note">まだ記録がありません。最初の受験者になろう🐰</div>';
       return;
@@ -959,8 +1037,10 @@ function finish(finished){
     answered,
     time_sec:t,
     rank,
-    type:kt.name
+    type:kt.name,
+    player_id:DEVICE_PLAYER_ID
   };
+  saveLocalAttempt(rankingRow);
   (async()=>{
     let saved=await insertRanking(rankingRow);
     if(!saved.ok && saved.duplicate){
@@ -974,7 +1054,7 @@ function finish(finished){
     if(!saved.ok){
       alert("結果は表示できたけど、ランキング登録だけ失敗しました。\n通信を確認してもう一度挑戦してね。");
     }
-    await renderRanking("resultRanking");
+    await renderRanking("resultRanking","best");
   })();
 
   const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${rankSubtitles[rank]||""}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n🧠 ${kt.name}\n⏱ ${formatTime(t)}\n#しゅり検定`;
@@ -994,7 +1074,7 @@ async function copyResult(){
 function retry(){
   $("resultScreen").classList.add("hidden");
   $("startScreen").classList.remove("hidden");
-  renderRanking("startRanking");
+  renderRanking("startRanking","best");
   window.scrollTo({top:0,behavior:"smooth"});
 }
 $("startBtn").onclick=startQuiz;
@@ -1010,7 +1090,20 @@ document.addEventListener("click",(e)=>{
   }
 });
 $("playerName").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();startQuiz();}});
-renderRanking("startRanking");
+
+document.addEventListener("click",(e)=>{
+  const tab=e.target.closest(".rankingTab");
+  if(!tab) return;
+  const group=tab.closest("[data-ranking-tabs]");
+  if(!group) return;
+  group.querySelectorAll(".rankingTab").forEach(x=>x.classList.remove("active"));
+  tab.classList.add("active");
+  const where=group.dataset.rankingTabs;
+  const targetId=where==="result"?"resultRanking":"startRanking";
+  renderRanking(targetId,tab.dataset.mode);
+});
+
+renderRanking("startRanking","best");
 </script>
 
 <div id="eventOverlay" class="eventOverlay hidden">
