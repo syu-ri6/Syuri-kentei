@@ -386,9 +386,9 @@
       </div>
 
       <div class="typeCard">
-        <div class="typeKicker">KNOWLEDGE TYPE</div>
-        <div id="knowledgeTypeName" class="typeName"></div>
-        <div id="knowledgeTypeDesc" class="typeDesc"></div>
+        <div class="typeKicker">PROFILE TITLE</div>
+        <div id="profileTitleName" class="typeName"></div>
+        <div id="profileTitleDesc" class="typeDesc"></div>
         <div id="hiddenTitles" class="titleWrap"></div>
       </div>
 
@@ -402,6 +402,8 @@
       <div class="grid2">
         <button class="primary" id="retryBtn">もう一度挑戦</button>
         <button class="secondary" id="copyBtn">結果をコピー</button>
+        <button class="secondary" id="profileCopyBtn">プロフィール用にコピー</button>
+        <button class="secondary" id="xShareBtn">𝕏 で結果を投稿</button>
       </div>
 
       <div id="shareText" class="shareText"></div>
@@ -556,7 +558,7 @@ function specialSystemReaction(qIndex, choiceIndex, isCorrect){
 
 
 const correctReactionsByQuestion = [
-  "14回。数えた人えらい。開始3問目までに目がもう仕事してる。",
+  "14回。数えた人えらい。1問目から目ぇ使わせすぎたww",
   "REALITY。ここ外したら、あなた今どこから来たんww",
   "6個。り、多いよね。自分でも多いと思う。",
   "チョコレート。胃袋の一軍、今日も無事スタメンです。",
@@ -1042,31 +1044,28 @@ function hiddenComment(qIndex, choiceIndex, isCorrect, lv){
   return "";
 }
 
-function typeResult(){
-  const s=categoryStats;
-  const rate=k=>s[k].total ? s[k].right/s[k].total : 0;
-  const rates={basic:rate("basic"),stream:rate("stream"),episode:rate("episode"),history:rate("history")};
-  const avg=(rates.basic+rates.stream+rates.episode+rates.history)/4;
-
-  if(answered>=40 && avg>=.88){
-    return {name:"本人疑惑型",desc:"基礎・配信・エピソード・古参履歴まで全部強いです。しゅり本人、または記憶の倉庫です。"};
-  }
-  if(rates.history>=.78 && rates.basic<.72){
-    return {name:"偏食型しゅりなー",desc:"基本問題を落とすのに、古参・履歴問題だけ妙に強いです。知識の取り方がだいぶ偏っています。"};
-  }
-  if(rates.episode>=Math.max(rates.basic,rates.stream,rates.history) && rates.episode>=.68){
-    return {name:"エピソード記憶型",desc:"珍事件・旅行・事故など、しゅりの『なんでそうなった』をよく覚えています。"};
-  }
-  if(rates.history>=Math.max(rates.basic,rates.stream,rates.episode) && rates.history>=.65){
-    return {name:"古参型",desc:"イベント順位や昔の言葉、特典まで強いです。活動履歴をちゃんと見てきたタイプ。"};
-  }
-  if(rates.stream>=Math.max(rates.basic,rates.episode,rates.history) && rates.stream>=.68){
-    return {name:"観測型",desc:"配信習慣・アバター・SNS・いつもの言動に強いです。普段のしゅりをよく見ています。"};
-  }
-  if(rates.basic>=.9){
-    return {name:"基礎ガチ型",desc:"簡単問題をほとんど落としません。派手さはないけど土台が異様に固いです。"};
-  }
-  return {name:"バランス型しゅりなー",desc:"特定ジャンルだけではなく、しゅり知識を広く拾っています。伸びしろも含めてバランス型。"};
+function profileTitleResult(rank){
+  const titles={
+    "10級":{name:"観測開始",desc:"しゅり検定、ここからスタート。まずは存在を観測しました。"},
+    "9級":{name:"見習いしゅりなー",desc:"ちょっと知ってる。ここから沼が始まります。"},
+    "8級":{name:"HP回復見習い",desc:"しゅり枠の基礎知識をじわじわ回収中。"},
+    "7級":{name:"しゅり知識班",desc:"いつもの配信ネタが少しずつ繋がってきました。"},
+    "6級":{name:"配信常連候補",desc:"このあたりから『見たことある』が『知ってる』に変わります。"},
+    "5級":{name:"しゅり履修中",desc:"しゅり情報をそれなりに授業済み。"},
+    "4級":{name:"しゅり生態研究員",desc:"行動パターンと珍事件の傾向を把握し始めています。"},
+    "3級":{name:"認定しゅりなー",desc:"もう普通にしゅりなー名乗っていいです。"},
+    "2級":{name:"しゅり通",desc:"一般しゅりなーより一段深いところまで知っています。"},
+    "1級":{name:"古参予備軍",desc:"新参の顔してても知識がだいぶ古参です。"},
+    "初段":{name:"古参認定",desc:"ここから段位。しゅり史に片足突っ込んでます。"},
+    "二段":{name:"しゅり史研究員",desc:"昔の言葉やイベント履歴までちゃんと残っています。"},
+    "三段":{name:"記憶保管員",desc:"珍事件や細かいエピソードを謎に保存している人。"},
+    "四段":{name:"古参領域",desc:"ここまで来ると知らなくても普通。知ってたらかなり見ています。"},
+    "五段":{name:"しゅりDB",desc:"質問されるとだいたい検索結果みたいに答えられます。"},
+    "六段":{name:"しゅり情報局",desc:"活動履歴・ネタ・日常まで情報網が広いです。"},
+    "七段":{name:"本人監修級",desc:"もう答え合わせを本人に頼むレベルです。"},
+    "師範":{name:"本人疑惑",desc:"しゅり本人ですか？違うなら一旦なんでそこまで知ってるの？"}
+  };
+  return titles[rank] || {name:"しゅりなー",desc:"しゅり検定認定。"};
 }
 
 function hiddenTitlesForResult(){
@@ -1498,9 +1497,9 @@ function finish(finished){
   $("statCorrect").textContent=correct;
   $("statAnswered").textContent=`${answered}/50`;
   $("statTime").textContent=formatTime(t);
-  const kt=typeResult();
-  $("knowledgeTypeName").textContent=kt.name;
-  $("knowledgeTypeDesc").textContent=kt.desc;
+  const titleInfo=profileTitleResult(rank);
+  $("profileTitleName").textContent=`${rank}｜${titleInfo.name}`;
+  $("profileTitleDesc").textContent=titleInfo.desc;
   const titles=hiddenTitlesForResult();
   $("hiddenTitles").innerHTML=titles.length
     ? titles.map(x=>`<span class="hiddenTitle">${escapeHtml(x)}</span>`).join("")
@@ -1516,7 +1515,7 @@ function finish(finished){
     answered,
     time_sec:t,
     rank,
-    type:kt.name,
+    type:titleInfo.name,
     player_id:DEVICE_PLAYER_ID
   };
   saveLocalAttempt(rankingRow);
@@ -1536,8 +1535,11 @@ function finish(finished){
     await renderRanking("resultRanking","best");
   })();
 
-  const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${rankSubtitles[rank]||""}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n🧠 ${kt.name}\n⏱ ${formatTime(t)}\n#しゅり検定`;
+  const profileText=`しゅり検定 ${rank}｜${titleInfo.name}`;
+  const pageUrl="https://syu-ri6.github.io/Syuri-kentei/";
+  const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${titleInfo.name}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n🔥 最高COMBO ${maxCombo}\n⏱ ${formatTime(t)}\n\n#しゅり検定\n${pageUrl}`;
   $("shareText").textContent=share;
+  $("shareText").dataset.profileText=profileText;
   window.scrollTo({top:0,behavior:"smooth"});
 }
 async function copyResult(){
@@ -1550,6 +1552,20 @@ async function copyResult(){
     alert("コピーできませんでした。長押しでコピーしてください。");
   }
 }
+async function copyProfileTitle(){
+  const text=$("shareText").dataset.profileText||"";
+  try{
+    await navigator.clipboard.writeText(text);
+    $("profileCopyBtn").textContent="コピーした！";
+    setTimeout(()=>$("profileCopyBtn").textContent="プロフィール用にコピー",1400);
+  }catch(e){
+    prompt("コピーしてね！",text);
+  }
+}
+function shareToX(){
+  const text=encodeURIComponent($("shareText").textContent);
+  window.open(`https://twitter.com/intent/tweet?text=${text}`,"_blank","noopener");
+}
 function retry(){
   $("resultScreen").classList.add("hidden");
   $("startScreen").classList.remove("hidden");
@@ -1561,6 +1577,8 @@ $("nextBtn").onclick=nextQuestion;
 $("stopBtn").onclick=confirmStop;
 $("retryBtn").onclick=retry;
 $("copyBtn").onclick=copyResult;
+$("profileCopyBtn").onclick=copyProfileTitle;
+$("xShareBtn").onclick=shareToX;
 
 document.addEventListener("click",(e)=>{
   if(e.target && e.target.id==="eventCloseBtn"){
