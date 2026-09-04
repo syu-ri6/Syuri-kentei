@@ -302,15 +302,15 @@
       <button class="primary" id="startBtn">検定をはじめる ✨</button>
       <div class="footerNote">🐰 うさぎの動きは正解と無関係です。ヒントにはなりません。</div>
       <div class="footerNote">
-        ※この試作版のランキングは、この端末・このブラウザ内だけに保存されます。
-        みんな共通ランキングは、あとでデータベース連携版にできます。
+        🌐 ランキングはみんな共通です。同じ表示名は1人1回まで登録できます。
       </div>
     </div>
 
     <div class="panel">
       <div class="rankingTitle">
-        <strong>🏆 この端末のランキング</strong>
+        <strong>🏆 みんなのランキング</strong>
       </div>
+      <div id="rankingStatus" class="footerNote">ランキング読み込み中…</div>
       <div id="startRanking" class="ranking"></div>
     </div>
   </section>
@@ -388,7 +388,7 @@
 
     <div class="panel" id="rankingPanel">
       <div class="rankingTitle">
-        <strong>🏆 しゅり検定ランキング</strong>
+        <strong>🏆 みんなのしゅり検定ランキング</strong>
         <span class="pill">同点は回答数→タイム</span>
       </div>
       <div id="resultRanking" class="ranking"></div>
@@ -450,7 +450,7 @@ const questions = [
   {lv:5,q:"REALITYで「おジャ魔女どれみ」コラボがあった時、しゅりはあと何個でコラボだった？",a:["3個", "1個", "2個", "5個"],c:0,e:"あと3個。ここまで覚えてたらだいぶ強い。"}
 ]
 
-const MAX_POINTSconst MAX_POINTS = questions.reduce((sum,q)=>sum+q.lv,0);
+const MAX_POINTS = questions.reduce((sum,q)=>sum+q.lv,0);
 const rankThresholds = [
   {min:123, rank:"師範"}, {min:120, rank:"七段"}, {min:116, rank:"六段"},
   {min:112, rank:"五段"}, {min:107, rank:"四段"}, {min:102, rank:"三段"},
@@ -636,28 +636,79 @@ function elapsed(){
 function updateTimer(){
   $("timer").textContent=formatTime(elapsed());
 }
-function loadRanking(){
-  try{return JSON.parse(localStorage.getItem("shuriKenteiRanking")||"[]")}catch(e){return []}
+const SUPABASE_URL='https://pphtlzinruwdkddhjuwu.supabase.co';
+const SUPABASE_KEY='sb_publishable_JCK0fpCAOFujdc727w7eSA_mTs2f-O9';
+
+function sbHeaders(extra={}){
+  return {
+    "apikey":SUPABASE_KEY,
+    "Content-Type":"application/json",
+    ...extra
+  };
 }
-function saveRanking(rows){
-  localStorage.setItem("shuriKenteiRanking",JSON.stringify(rows));
+function normalizeName(s){
+  return String(s||"").trim().replace(/\s+/g," ").toLowerCase();
 }
-function renderRanking(targetId){
+async function nameExists(name){
+  const params=new URLSearchParams({
+    select:"id",
+    name_key:`eq.${normalizeName(name)}`,
+    limit:"1"
+  });
+  const res=await fetch(`${SUPABASE_URL}/rest/v1/rankings?${params.toString()}`,{
+    headers:sbHeaders()
+  });
+  if(!res.ok) throw new Error("name_check_failed");
+  const rows=await res.json();
+  return rows.length>0;
+}
+async function fetchRanking(){
+  const params=new URLSearchParams({
+    select:"name,score,correct,answered,time_sec,rank,type,created_at",
+    order:"score.desc,answered.desc,time_sec.asc,created_at.asc",
+    limit:"20"
+  });
+  const res=await fetch(`${SUPABASE_URL}/rest/v1/rankings?${params.toString()}`,{
+    headers:sbHeaders()
+  });
+  if(!res.ok) throw new Error("ranking_fetch_failed");
+  return await res.json();
+}
+async function insertRanking(row){
+  const res=await fetch(`${SUPABASE_URL}/rest/v1/rankings`,{
+    method:"POST",
+    headers:sbHeaders({"Prefer":"return=minimal"}),
+    body:JSON.stringify(row)
+  });
+  if(res.ok) return {ok:true};
+  const text=await res.text();
+  const duplicate=res.status===409 || /duplicate|rankings_name_unique|23505/i.test(text);
+  return {ok:false,duplicate,text};
+}
+async function renderRanking(targetId){
   const box=$(targetId);
-  const rows=loadRanking().sort((a,b)=>b.score-a.score || (b.answered||50)-(a.answered||50) || a.time-b.time).slice(0,20);
-  if(!rows.length){
-    box.innerHTML='<div class="note">まだ記録がありません。最初の受験者になろう🐰</div>';
-    return;
+  if(!box) return;
+  box.innerHTML='<div class="note">ランキング読み込み中… 🐰</div>';
+  try{
+    const rows=await fetchRanking();
+    if($("rankingStatus")) $("rankingStatus").textContent="🌐 みんな共通ランキング";
+    if(!rows.length){
+      box.innerHTML='<div class="note">まだ記録がありません。最初の受験者になろう🐰</div>';
+      return;
+    }
+    box.innerHTML = `
+      <div class="rankrow head"><div>順位</div><div>名前</div><div style="text-align:right">認定</div><div style="text-align:right">記録</div></div>
+      ${rows.map((r,i)=>`
+        <div class="rankrow">
+          <div class="place">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</div>
+          <div class="name">${escapeHtml(r.name)}</div>
+          <div class="tiny"><b>${escapeHtml(r.rank)}</b><br>${r.score}pt</div>
+          <div class="tiny">${r.answered}/50問<br>${formatTime(r.time_sec)}</div>
+        </div>`).join("")}`;
+  }catch(e){
+    if($("rankingStatus")) $("rankingStatus").textContent="ランキング接続エラー";
+    box.innerHTML='<div class="note">ランキングを読み込めませんでした。少し時間をおいて再読み込みしてね。</div>';
   }
-  box.innerHTML = `
-    <div class="rankrow head"><div>順位</div><div>名前</div><div style="text-align:right">認定</div><div style="text-align:right">記録</div></div>
-    ${rows.map((r,i)=>`
-      <div class="rankrow">
-        <div class="place">${i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1)}</div>
-        <div class="name">${escapeHtml(r.name)}</div>
-        <div class="tiny"><b>${escapeHtml(r.rank)}</b><br>${r.score}pt</div>
-        <div class="tiny">${r.answered||50}/50問<br>${formatTime(r.time)}</div>
-      </div>`).join("")}`;
 }
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
@@ -745,8 +796,29 @@ function rabbitAfterAnswer(isCorrect, lv){
   }
 }
 
-function startQuiz(){
-  player=$("playerName").value.trim()||"ななしゅりなー";
+async function startQuiz(){
+  const startBtn=$("startBtn");
+  player=$("playerName").value.trim();
+  if(!player){
+    alert("ランキングに載せる名前を入れてね🐰");
+    $("playerName").focus();
+    return;
+  }
+  startBtn.disabled=true;
+  const oldText=startBtn.textContent;
+  startBtn.textContent="名前を確認中…";
+  try{
+    if(await nameExists(player)){
+      alert("その名前はもうランキングで使われてるよ！\n少しだけ名前を変えてね🐰");
+      return;
+    }
+  }catch(e){
+    alert("ランキングに接続できませんでした。\n通信を確認して、もう一度押してね。");
+    return;
+  }finally{
+    startBtn.disabled=false;
+    startBtn.textContent=oldText;
+  }
   index=0;correct=0;answered=0;selected=false;points=0;lastRank="10級";correctStreak=0;wrongStreak=0;maxCombo=0;answerLog=[];categoryStats={basic:{right:0,total:0},stream:{right:0,total:0},episode:{right:0,total:0},history:{right:0,total:0}};startedAt=Date.now();
   $("startScreen").classList.add("hidden");
   $("resultScreen").classList.add("hidden");
@@ -877,14 +949,36 @@ function finish(finished){
     ? titles.map(x=>`<span class="hiddenTitle">${escapeHtml(x)}</span>`).join("")
     : `<span class="hiddenTitle">🐰 まだ隠し称号なし</span>`;
 
-  const rows=loadRanking();
-  rows.push({name:player,score:points,rank,time:t,answered,correct,finished,ts:Date.now()});
-  saveRanking(rows);
   $("rankingPanel").classList.remove("hidden");
+
+  // Shared ranking save. Name was checked at start, but retry once if it was taken meanwhile.
+  const rankingRow={
+    name:player,
+    score:points,
+    correct,
+    answered,
+    time_sec:t,
+    rank,
+    type:kt.name
+  };
+  (async()=>{
+    let saved=await insertRanking(rankingRow);
+    if(!saved.ok && saved.duplicate){
+      const alt=prompt("受験中に同じ名前が先に登録されたみたい！\n別のランキング名を入れてね🐰", player+"2");
+      if(alt && alt.trim()){
+        rankingRow.name=alt.trim();
+        player=rankingRow.name;
+        saved=await insertRanking(rankingRow);
+      }
+    }
+    if(!saved.ok){
+      alert("結果は表示できたけど、ランキング登録だけ失敗しました。\n通信を確認してもう一度挑戦してね。");
+    }
+    await renderRanking("resultRanking");
+  })();
 
   const share = `🐰 第1回しゅり検定\n${player} の結果\n🎓 ${finished?"":"途中 "}${rank}｜${rankSubtitles[rank]||""}\n💎 ${points}pt / ${MAX_POINTS}pt\n✅ ${correct}/${answered}問正解（${answered}/50問で終了）\n🧠 ${kt.name}\n⏱ ${formatTime(t)}\n#しゅり検定`;
   $("shareText").textContent=share;
-  renderRanking("resultRanking");
   window.scrollTo({top:0,behavior:"smooth"});
 }
 async function copyResult(){
@@ -915,7 +1009,7 @@ document.addEventListener("click",(e)=>{
     $("eventOverlay").classList.add("hidden");
   }
 });
-$("playerName").addEventListener("keydown",e=>{if(e.key==="Enter")startQuiz()});
+$("playerName").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();startQuiz();}});
 renderRanking("startRanking");
 </script>
 
